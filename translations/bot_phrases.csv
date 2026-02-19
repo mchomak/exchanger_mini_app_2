@@ -1,0 +1,4 @@
+key,ru,en
+welcome_message,"Привет! Я бот для обмена криптовалют.","Hello! I'm a crypto exchange bot."
+help_message,"Доступные команды:\n/start - начать работу\n/help - показать помощь","Available commands:\n/start - start\n/help - show help"
+open_app_button,"🔄 Открыть обменник","🔄 Open Exchange"
