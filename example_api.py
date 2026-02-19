@@ -5,7 +5,7 @@
 """
 
 import logging
-from sapsanex_api import (
+from exchanger_api import (
     ExchangerAPI,
     ExchangerAPIError,
     ValidationError,
