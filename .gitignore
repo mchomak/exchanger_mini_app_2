@@ -53,3 +53,10 @@ Thumbs.db
 
 # Alembic
 alembic/versions/*.pyc
+
+# Node.js
+node_modules/
+frontend/dist/
+
+# Logs directory
+logs/
