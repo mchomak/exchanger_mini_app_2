@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -12,14 +11,13 @@ from backend.app.api.schemas import (
     CalculateRequest,
     CalculateResponse,
     CreateExchangeRequest,
-    ErrorResponse,
     InitUserRequest,
     UserResponse,
     UserSettingsResponse,
 )
 from backend.app.core.database import get_db
-from backend.app.models.user import User
 from backend.app.models.exchange import Exchange
+from backend.app.models.user import User
 from backend.app.models.user_settings import UserSettings
 from backend.app.services.exchanger import (
     calculate_exchange,
@@ -35,18 +33,14 @@ router = APIRouter(prefix="/api")
 
 
 def _error(message: str, status_code: int = 400) -> HTTPException:
-    """Return a standardized error response."""
     return HTTPException(status_code=status_code, detail={"error": True, "message": message})
 
 
-# ─── Users ────────────────────────────────────────────────────────────────────
+# ── Users ─────────────────────────────────────────────────────────────────────
 
 @router.post("/users/init", response_model=UserResponse)
 async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
-    """
-    Initialize user from Telegram initData.
-    Validates HMAC signature, finds or creates user, returns user + settings.
-    """
+    """Validate Telegram initData, find or create user, return user + settings."""
     user_data = validate_init_data(body.init_data)
     if not user_data:
         raise _error("Invalid Telegram initData", 401)
@@ -57,7 +51,6 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
 
     logger.info(f"User init: telegram_id={telegram_id}")
 
-    # Find or create user
     result = await db.execute(select(User).where(User.telegram_id == telegram_id))
     user = result.scalar_one_or_none()
 
@@ -71,13 +64,7 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
         )
         db.add(user)
         await db.flush()
-
-        # Create default settings
-        user_settings = UserSettings(
-            user_id=user.id,
-            language=user_data.get("language_code", "ru"),
-        )
-        db.add(user_settings)
+        db.add(UserSettings(user_id=user.id, language=user_data.get("language_code", "ru")))
         await db.flush()
         logger.info(f"New user created: telegram_id={telegram_id}")
     else:
@@ -88,7 +75,6 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
 
     await db.commit()
 
-    # Reload to get settings relationship
     result = await db.execute(select(User).where(User.id == user.id))
     user = result.scalar_one()
 
@@ -112,7 +98,7 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
     )
 
 
-# ─── Exchange ─────────────────────────────────────────────────────────────────
+# ── Exchange ──────────────────────────────────────────────────────────────────
 
 @router.get("/exchange/directions")
 async def get_directions():
@@ -123,26 +109,25 @@ async def get_directions():
         return directions
     except Exception as e:
         logger.error(f"Error fetching directions: {e}")
-        raise _error(f"Failed to fetch directions: {str(e)}", 500)
+        raise _error(f"Failed to fetch directions: {e}", 500)
 
 
 @router.post("/exchange/calculate", response_model=CalculateResponse)
 async def calculate(body: CalculateRequest):
     """Calculate exchange amounts for a direction."""
     try:
-        logger.debug(f"Calculate: direction={body.direction_id}, amount={body.amount}, action={body.calc_action}")
+        logger.debug(f"Calculate: direction={body.direction_id}, amount={body.amount}")
         result = calculate_exchange(body.direction_id, body.amount, body.calc_action)
         return CalculateResponse(**result)
     except Exception as e:
         logger.error(f"Error calculating: {e}")
-        raise _error(f"Calculation failed: {str(e)}", 500)
+        raise _error(f"Calculation failed: {e}", 500)
 
 
 @router.post("/exchange/create")
 async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = Depends(get_db)):
     """Create a new exchange order."""
     try:
-        # Find user
         result = await db.execute(select(User).where(User.telegram_id == body.user_telegram_id))
         user = result.scalar_one_or_none()
         if not user:
@@ -151,7 +136,6 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
         logger.info(f"Creating exchange: user={body.user_telegram_id}, direction={body.direction_id}")
         bid_data = create_exchange(body.direction_id, body.amount, body.fields)
 
-        # Save to DB
         exchange = Exchange(
             user_id=user.id,
             exchanger_order_id=int(bid_data["id"]) if bid_data.get("id") else None,
@@ -170,14 +154,13 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
         )
         db.add(exchange)
         await db.commit()
-
         logger.info(f"Exchange created: hash={bid_data.get('hash')}")
         return bid_data
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error creating exchange: {e}")
-        raise _error(f"Exchange creation failed: {str(e)}", 500)
+        raise _error(f"Exchange creation failed: {e}", 500)
 
 
 @router.get("/exchange/{hash}/status")
@@ -186,10 +169,7 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
     try:
         status_data = get_bid_status(hash)
 
-        # Update status in DB if changed
-        result = await db.execute(
-            select(Exchange).where(Exchange.exchanger_order_hash == hash)
-        )
+        result = await db.execute(select(Exchange).where(Exchange.exchanger_order_hash == hash))
         exchange = result.scalar_one_or_none()
         if exchange and exchange.status != status_data.get("status_title"):
             exchange.status = status_data.get("status_title")
@@ -200,13 +180,12 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
         return status_data
     except Exception as e:
         logger.error(f"Error getting status for {hash}: {e}")
-        raise _error(f"Status check failed: {str(e)}", 500)
+        raise _error(f"Status check failed: {e}", 500)
 
 
-# ─── Translations ─────────────────────────────────────────────────────────────
+# ── Translations ──────────────────────────────────────────────────────────────
 
 @router.get("/translations/{language}")
 async def get_translations(language: str):
     """Get all app phrases for a given language."""
-    phrases = get_all_phrases(lang=language, source="app")
-    return phrases
+    return get_all_phrases(lang=language, source="app")

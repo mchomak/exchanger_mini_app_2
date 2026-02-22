@@ -1,7 +1,8 @@
 """User model for Telegram users."""
 
 from datetime import datetime
-from sqlalchemy import BigInteger, String, DateTime, Index
+
+from sqlalchemy import BigInteger, DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.core.database import Base
@@ -22,6 +23,4 @@ class User(Base):
     settings: Mapped["UserSettings"] = relationship(back_populates="user", uselist=False, lazy="selectin")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="user", lazy="selectin")
 
-    __table_args__ = (
-        Index("ix_users_telegram_id", "telegram_id"),
-    )
+    __table_args__ = (Index("ix_users_telegram_id", "telegram_id"),)

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env.example
+*.md
+__pycache__
+*.pyc
+*.pyo
+node_modules
+frontend/dist
+logs
+.vscode
+.idea
+venv
+env
+*.egg-info

@@ -2,7 +2,8 @@
 
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import Integer, String, Numeric, Boolean, Text, DateTime, ForeignKey, Index
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +34,4 @@ class Exchange(Base):
 
     user: Mapped["User"] = relationship(back_populates="exchanges")
 
-    __table_args__ = (
-        Index("ix_exchanges_order_hash", "exchanger_order_hash"),
-    )
+    __table_args__ = (Index("ix_exchanges_order_hash", "exchanger_order_hash"),)

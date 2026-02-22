@@ -1,8 +1,4 @@
-/**
- * Translation context for multi-language support.
- */
-
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Translations } from "../types";
 

@@ -1,8 +1,10 @@
 """Application configuration loaded from environment variables."""
 
-from pydantic_settings import BaseSettings
-from typing import List
 import json
+import os
+from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -11,7 +13,7 @@ class Settings(BaseSettings):
     webapp_url: str = "http://localhost:5173"
 
     # Database
-    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/exchanger_db"
+    database_url: str = "postgresql+asyncpg://user:password@postgres:5432/exchanger_db"
 
     # Exchanger API
     api_login: str = ""

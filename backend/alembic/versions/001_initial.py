@@ -1,9 +1,8 @@
-"""Initial migration - create users, exchanges, user_settings tables.
+"""Initial migration — create users, exchanges, user_settings tables.
 
 Revision ID: 001
 Revises: None
 Create Date: 2025-01-01 00:00:00.000000
-
 """
 from typing import Sequence, Union
 
@@ -18,7 +17,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Users table
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -32,7 +30,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_users_telegram_id", "users", ["telegram_id"])
 
-    # Exchanges table
     op.create_table(
         "exchanges",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -56,7 +53,6 @@ def upgrade() -> None:
     )
     op.create_index("ix_exchanges_order_hash", "exchanges", ["exchanger_order_hash"])
 
-    # User settings table
     op.create_table(
         "user_settings",
         sa.Column("id", sa.Integer(), primary_key=True),

@@ -1,10 +1,3 @@
-/**
- * Main exchange calculator component.
- *
- * Displays two currency input fields (give/get) with real-time
- * recalculation and currency selection modals.
- */
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useExchanger } from "../hooks/useExchanger";
@@ -19,8 +12,7 @@ interface Props {
 
 export function ExchangeCalculator({ userSettings }: Props) {
   const { t } = useTranslation();
-  const { directions, loading: directionsLoading, getDirections, calculate, findDirection } =
-    useExchanger();
+  const { directions, loading: directionsLoading, getDirections, calculate } = useExchanger();
 
   const [amountGive, setAmountGive] = useState("1");
   const [amountGet, setAmountGet] = useState("");
@@ -32,10 +24,8 @@ export function ExchangeCalculator({ userSettings }: Props) {
   const [modalGiveOpen, setModalGiveOpen] = useState(false);
   const [modalGetOpen, setModalGetOpen] = useState(false);
 
-  // Track which field the user is currently editing
   const editingRef = useRef<"give" | "get">("give");
 
-  // Extract unique currency lists from directions
   const giveCurrencies = useMemo(() => {
     const seen = new Set<string>();
     return directions
@@ -67,19 +57,15 @@ export function ExchangeCalculator({ userSettings }: Props) {
 
       const defaultGive = userSettings?.default_currency_give || "USDT TRC20";
       const defaultGet = userSettings?.default_currency_get || "Сбербанк RUB";
-
-      // Try to find the default direction
       const giveLower = defaultGive.toLowerCase();
       const getKeywords = defaultGet.toLowerCase().split(/\s+/);
+
       let found = dirs.find((d) => {
         const gt = d.currency_give_title.toLowerCase();
         const gett = d.currency_get_title.toLowerCase();
         return gt.includes(giveLower) && getKeywords.every((kw) => gett.includes(kw));
       });
-
-      if (!found) {
-        found = dirs[0];
-      }
+      if (!found) found = dirs[0];
 
       setCurrencyGive(found.currency_give_title);
       setCurrencyGet(found.currency_get_title);
@@ -103,7 +89,6 @@ export function ExchangeCalculator({ userSettings }: Props) {
       .finally(() => setCalcLoading(false));
   }, [currentDirection]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced recalculation
   const debouncedCalc = useDebounce(
     (directionId: string, amount: number, action: string) => {
       if (amount <= 0 || isNaN(amount)) return;
@@ -111,11 +96,8 @@ export function ExchangeCalculator({ userSettings }: Props) {
       calculate(directionId, amount, action)
         .then((result) => {
           setCalcResult(result);
-          if (action === "give") {
-            setAmountGet(result.sum_get);
-          } else {
-            setAmountGive(result.sum_give);
-          }
+          if (action === "give") setAmountGet(result.sum_get);
+          else setAmountGive(result.sum_give);
         })
         .catch(() => {})
         .finally(() => setCalcLoading(false));
@@ -128,9 +110,8 @@ export function ExchangeCalculator({ userSettings }: Props) {
       setAmountGive(value);
       editingRef.current = "give";
       const amount = parseFloat(value);
-      if (currentDirection && !isNaN(amount) && amount > 0) {
+      if (currentDirection && !isNaN(amount) && amount > 0)
         debouncedCalc(currentDirection.direction_id, amount, "give");
-      }
     },
     [currentDirection, debouncedCalc]
   );
@@ -140,9 +121,8 @@ export function ExchangeCalculator({ userSettings }: Props) {
       setAmountGet(value);
       editingRef.current = "get";
       const amount = parseFloat(value);
-      if (currentDirection && !isNaN(amount) && amount > 0) {
+      if (currentDirection && !isNaN(amount) && amount > 0)
         debouncedCalc(currentDirection.direction_id, amount, "get");
-      }
     },
     [currentDirection, debouncedCalc]
   );
@@ -150,14 +130,12 @@ export function ExchangeCalculator({ userSettings }: Props) {
   const handleSelectGiveCurrency = useCallback(
     (code: string) => {
       setCurrencyGive(code);
-      // Find a matching direction with the new give currency
       const dir = directions.find(
         (d) => d.currency_give_title === code && d.currency_get_title === currencyGet
       );
       if (dir) {
         setCurrentDirection(dir);
       } else {
-        // Pick the first available get currency for this give currency
         const firstDir = directions.find((d) => d.currency_give_title === code);
         if (firstDir) {
           setCurrencyGet(firstDir.currency_get_title);
@@ -174,9 +152,7 @@ export function ExchangeCalculator({ userSettings }: Props) {
       const dir = directions.find(
         (d) => d.currency_give_title === currencyGive && d.currency_get_title === code
       );
-      if (dir) {
-        setCurrentDirection(dir);
-      }
+      if (dir) setCurrentDirection(dir);
     },
     [directions, currencyGive]
   );
@@ -185,7 +161,6 @@ export function ExchangeCalculator({ userSettings }: Props) {
     alert(t("feature_in_development"));
   }, [t]);
 
-  // Rate display
   const rateText = useMemo(() => {
     if (!calcResult) return "";
     return `1 ${calcResult.currency_give} = ${calcResult.course_get} ${calcResult.currency_get}`;
@@ -215,8 +190,7 @@ export function ExchangeCalculator({ userSettings }: Props) {
           />
           <button
             onClick={() => setModalGiveOpen(true)}
-            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap
-                       border-l border-tg-hint/20 text-sm"
+            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap border-l border-tg-hint/20 text-sm"
           >
             {currencyGive || "..."} ▼
           </button>
@@ -237,8 +211,7 @@ export function ExchangeCalculator({ userSettings }: Props) {
           />
           <button
             onClick={() => setModalGetOpen(true)}
-            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap
-                       border-l border-tg-hint/20 text-sm"
+            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap border-l border-tg-hint/20 text-sm"
           >
             {currencyGet || "..."} ▼
           </button>
@@ -257,8 +230,8 @@ export function ExchangeCalculator({ userSettings }: Props) {
               </p>
               {calcResult.min_give !== "no" && (
                 <p className="text-xs text-tg-hint text-center">
-                  {t("min_amount")}: {calcResult.min_give} · {t("max_amount")}:{" "}
-                  {calcResult.max_give} {calcResult.currency_give}
+                  {t("min_amount")}: {calcResult.min_give} · {t("max_amount")}: {calcResult.max_give}{" "}
+                  {calcResult.currency_give}
                 </p>
               )}
               {calcResult.reserve !== "no" && (
@@ -274,13 +247,11 @@ export function ExchangeCalculator({ userSettings }: Props) {
       {/* Exchange button */}
       <button
         onClick={handleExchange}
-        className="w-full py-4 rounded-xl bg-tg-button text-tg-button-text
-                   font-semibold text-lg active:opacity-80 transition-opacity"
+        className="w-full py-4 rounded-xl bg-tg-button text-tg-button-text font-semibold text-lg active:opacity-80 transition-opacity"
       >
         {t("exchange_button")}
       </button>
 
-      {/* Currency modals */}
       <CurrencyModal
         open={modalGiveOpen}
         onClose={() => setModalGiveOpen(false)}

@@ -16,13 +16,7 @@ def validate_init_data(init_data: str) -> Optional[Dict[str, Any]]:
     """
     Validate Telegram WebApp initData using HMAC-SHA256.
 
-    See: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-
-    Args:
-        init_data: Raw initData string from Telegram WebApp
-
-    Returns:
-        Parsed user data dict if valid, None if invalid.
+    Returns parsed user data dict if valid, None if invalid.
     """
     if not init_data:
         logger.warning("Empty initData received")
@@ -31,13 +25,12 @@ def validate_init_data(init_data: str) -> Optional[Dict[str, Any]]:
     try:
         parsed = parse_qs(init_data, keep_blank_values=True)
 
-        # Extract hash
         received_hash = parsed.get("hash", [None])[0]
         if not received_hash:
             logger.warning("No hash in initData")
             return None
 
-        # Build data-check-string (sorted key=value pairs, excluding hash)
+        # Build data-check-string (sorted, excluding hash)
         data_pairs = []
         for key, values in parsed.items():
             if key == "hash":
@@ -63,7 +56,6 @@ def validate_init_data(init_data: str) -> Optional[Dict[str, Any]]:
             logger.warning("initData HMAC validation failed")
             return None
 
-        # Parse user JSON
         user_raw = parsed.get("user", [None])[0]
         if user_raw:
             user_data = json.loads(unquote(user_raw))

@@ -1,8 +1,4 @@
-/**
- * Custom debounce hook.
- */
-
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export function useDebounce<T extends (...args: any[]) => any>(
   callback: T,
@@ -17,20 +13,14 @@ export function useDebounce<T extends (...args: any[]) => any>(
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
   return useCallback(
     (...args: any[]) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        callbackRef.current(...args);
-      }, delay);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => callbackRef.current(...args), delay);
     },
     [delay]
   ) as T;

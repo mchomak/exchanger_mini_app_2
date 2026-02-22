@@ -1,24 +1,20 @@
 """Exchanger API service with in-memory caching."""
 
 import logging
-import time
-from typing import Any, Dict, List, Optional
-
 import sys
 import os
+import time
+from typing import Any, Dict, List
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# exchanger_api.py lives in the project root; inside Docker it is copied to /app
+sys.path.insert(0, os.environ.get("PROJECT_ROOT", "/app"))
 
-from exchanger_api import ExchangerAPI, ExchangerAPIError
-from backend.app.core.config import settings
+from exchanger_api import ExchangerAPI  # noqa: E402
+from backend.app.core.config import settings  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-# In-memory cache for directions
-_directions_cache: Dict[str, Any] = {
-    "data": None,
-    "timestamp": 0,
-}
+_directions_cache: Dict[str, Any] = {"data": None, "timestamp": 0}
 CACHE_TTL = 300  # 5 minutes
 
 
@@ -32,12 +28,7 @@ def get_api() -> ExchangerAPI:
 
 
 def get_directions_cached() -> List[Dict]:
-    """
-    Get exchange directions with 5-minute in-memory cache.
-
-    Returns:
-        List of direction dicts from the API.
-    """
+    """Get exchange directions with 5-minute in-memory cache."""
     now = time.time()
     if _directions_cache["data"] is not None and (now - _directions_cache["timestamp"]) < CACHE_TTL:
         logger.debug("Returning cached directions")
@@ -52,17 +43,7 @@ def get_directions_cached() -> List[Dict]:
 
 
 def calculate_exchange(direction_id: str, amount: float, calc_action: str = "give") -> Dict:
-    """
-    Calculate exchange amount.
-
-    Args:
-        direction_id: Direction ID
-        amount: Amount to exchange
-        calc_action: 'give' or 'get'
-
-    Returns:
-        CalcResult as dict.
-    """
+    """Calculate exchange amount."""
     api = get_api()
     result = api.calculate(direction_id, amount, action=calc_action)
     return {
@@ -83,25 +64,10 @@ def calculate_exchange(direction_id: str, amount: float, calc_action: str = "giv
     }
 
 
-def create_exchange(
-    direction_id: str,
-    amount: float,
-    fields: Dict[str, str],
-    action: str = "give",
-) -> Dict:
-    """
-    Create an exchange bid.
-
-    Returns:
-        BidResult as dict.
-    """
+def create_exchange(direction_id: str, amount: float, fields: Dict[str, str], action: str = "give") -> Dict:
+    """Create an exchange bid."""
     api = get_api()
-    bid = api.full_exchange(
-        direction_id=direction_id,
-        amount=amount,
-        fields=fields,
-        action=action,
-    )
+    bid = api.full_exchange(direction_id=direction_id, amount=amount, fields=fields, action=action)
     return {
         "id": bid.id,
         "hash": bid.hash,

@@ -4,8 +4,8 @@ import logging
 from datetime import datetime
 
 from aiogram import Router
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.filters import Command, CommandStart
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, WebAppInfo
 from sqlalchemy import select
 
 from backend.app.core.config import settings
@@ -18,37 +18,31 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-def _get_language(user_lang: str | None) -> str:
-    """Normalize language code to 'ru' or 'en'."""
-    if user_lang and user_lang.startswith("en"):
+def _lang(code: str | None) -> str:
+    if code and code.startswith("en"):
         return "en"
     return "ru"
 
 
-def _get_webapp_keyboard(lang: str) -> ReplyKeyboardMarkup:
-    """Build keyboard with WebApp button."""
-    webapp_url = settings.webapp_url
-    button_text = get_phrase("open_app_button", lang, source="bot")
+def _webapp_keyboard(lang: str) -> ReplyKeyboardMarkup:
+    text = get_phrase("open_app_button", lang, source="bot")
     return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text=button_text, web_app=WebAppInfo(url=webapp_url))]
-        ],
+        keyboard=[[KeyboardButton(text=text, web_app=WebAppInfo(url=settings.webapp_url))]],
         resize_keyboard=True,
     )
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    """Handle /start command: register user and show WebApp button."""
+    """Register user and show WebApp button."""
     tg_user = message.from_user
     if not tg_user:
         return
 
-    lang = _get_language(tg_user.language_code)
+    lang = _lang(tg_user.language_code)
     logger.info(f"/start from user {tg_user.id} (@{tg_user.username}), lang={lang}")
 
     async with async_session() as db:
-        # Find or create user
         result = await db.execute(select(User).where(User.telegram_id == tg_user.id))
         user = result.scalar_one_or_none()
 
@@ -62,9 +56,7 @@ async def cmd_start(message: Message):
             )
             db.add(user)
             await db.flush()
-
-            user_settings = UserSettings(user_id=user.id, language=lang)
-            db.add(user_settings)
+            db.add(UserSettings(user_id=user.id, language=lang))
             await db.commit()
             logger.info(f"New user registered: telegram_id={tg_user.id}")
         else:
@@ -75,16 +67,12 @@ async def cmd_start(message: Message):
             await db.commit()
 
     welcome = get_phrase("welcome_message", lang, source="bot")
-    keyboard = _get_webapp_keyboard(lang)
-    await message.answer(welcome, reply_markup=keyboard)
+    await message.answer(welcome, reply_markup=_webapp_keyboard(lang))
 
 
 @router.message(Command("help"))
 async def cmd_help(message: Message):
-    """Handle /help command."""
     tg_user = message.from_user
-    lang = _get_language(tg_user.language_code if tg_user else None)
+    lang = _lang(tg_user.language_code if tg_user else None)
     logger.info(f"/help from user {tg_user.id if tg_user else 'unknown'}")
-
-    help_text = get_phrase("help_message", lang, source="bot")
-    await message.answer(help_text)
+    await message.answer(get_phrase("help_message", lang, source="bot"))

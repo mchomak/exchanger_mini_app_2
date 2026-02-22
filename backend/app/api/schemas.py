@@ -1,11 +1,19 @@
 """Pydantic schemas for request/response validation."""
 
+from typing import Dict, Optional
+
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
 
 
 class InitUserRequest(BaseModel):
     init_data: str = Field(..., description="Telegram WebApp initData string")
+
+
+class UserSettingsResponse(BaseModel):
+    default_currency_give: str = "USDT TRC20"
+    default_currency_get: str = "Сбербанк RUB"
+    notifications_enabled: bool = True
+    language: str = "ru"
 
 
 class UserResponse(BaseModel):
@@ -15,14 +23,7 @@ class UserResponse(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     language_code: str = "ru"
-    settings: Optional["UserSettingsResponse"] = None
-
-
-class UserSettingsResponse(BaseModel):
-    default_currency_give: str = "USDT TRC20"
-    default_currency_get: str = "Сбербанк RUB"
-    notifications_enabled: bool = True
-    language: str = "ru"
+    settings: Optional[UserSettingsResponse] = None
 
 
 class CalculateRequest(BaseModel):

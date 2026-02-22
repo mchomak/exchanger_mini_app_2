@@ -5,9 +5,10 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from backend.app.api.routes import router
 from backend.app.core.config import settings
 from backend.app.core.logging_config import setup_logging
-from backend.app.api.routes import router
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -18,7 +19,6 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -33,10 +33,7 @@ app.include_router(router)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled error: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"error": True, "message": "Internal server error"},
-    )
+    return JSONResponse(status_code=500, content={"error": True, "message": "Internal server error"})
 
 
 @app.get("/health")

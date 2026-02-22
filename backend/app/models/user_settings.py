@@ -1,6 +1,6 @@
 """User settings model."""
 
-from sqlalchemy import Integer, String, Boolean, ForeignKey
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.core.database import Base
