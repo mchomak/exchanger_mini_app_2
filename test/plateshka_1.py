@@ -8,7 +8,7 @@ import json
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-from config import API_LOGIN, API_KEY, BASE_URL
+from test.config import API_LOGIN, API_KEY, BASE_URL
 
 # ============================================================================
 # КОНФИГУРАЦИЯ

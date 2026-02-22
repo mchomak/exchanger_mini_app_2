@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         return json.loads(self.cors_origins)
 
     class Config:
-        env_file = "../.env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
 
 

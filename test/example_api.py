@@ -14,7 +14,7 @@ from exchanger_api import (
     DirectionNotFoundError,
     setup_logging,
 )
-from config import API_LOGIN, API_KEY, BASE_URL
+from test.config import API_LOGIN, API_KEY, BASE_URL
 
 
 def main():

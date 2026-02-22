@@ -25,7 +25,7 @@ async def main():
         logger.error("BOT_TOKEN is not set in .env file!")
         sys.exit(1)
 
-    bot = Bot(token=settings.bot_token, parse_mode=ParseMode.HTML)
+    bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
     dp.include_router(router)
 
