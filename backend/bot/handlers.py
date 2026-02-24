@@ -10,8 +10,7 @@ from sqlalchemy import select
 
 from backend.app.core.config import settings
 from backend.app.core.database import async_session
-from backend.app.models.user import User
-from backend.app.models.user_settings import UserSettings
+from backend.app.models import User, Exchange, UserSettings  # noqa: F401 — all must be imported so SQLAlchemy resolves relationships
 from backend.app.services.translations import get_phrase
 
 logger = logging.getLogger(__name__)

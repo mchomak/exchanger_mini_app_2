@@ -1,0 +1,273 @@
+1) в боте какая то ошибка, во логи:
+
+postgres-1  | PostgreSQL init process complete; ready for start up.
+
+postgres-1  |
+
+postgres-1  | 2026-02-23 20:54:04.490 UTC [1] LOG:  starting PostgreSQL 15.16 (Debian 15.16-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+
+postgres-1  | 2026-02-23 20:54:04.490 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+
+postgres-1  | 2026-02-23 20:54:04.491 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+
+postgres-1  | 2026-02-23 20:54:04.493 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+
+postgres-1  | 2026-02-23 20:54:04.498 UTC [63] LOG:  database system was shut down at 2026-02-23 20:54:04 UTC
+
+postgres-1  | 2026-02-23 20:54:04.508 UTC [1] LOG:  database system is ready to accept connections
+
+postgres-1  | 2026-02-23 20:59:04.597 UTC [61] LOG:  checkpoint starting: time
+
+postgres-1  | 2026-02-23 20:59:15.755 UTC [61] LOG:  checkpoint complete: wrote 114 buffers (0.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=11.146 s, sync=0.007 s, total=11.158 s; sync files=72, longest=0.001 s, average=0.001 s; distance=525 kB, estimate=525 kB
+
+postgres-1  | 2026-02-24 13:02:09.093 UTC [95502] FATAL:  unsupported frontend protocol 0.0: server supports 3.0 to 3.0
+
+postgres-1  | 2026-02-24 13:02:09.449 UTC [95503] FATAL:  unsupported frontend protocol 255.255: server supports 3.0 to 3.0
+
+postgres-1  | 2026-02-24 13:02:09.844 UTC [95504] FATAL:  no PostgreSQL user name specified in startup packet
+
+bot-1       | InvalidRequestError: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[User(users)]'. Original exception was: When initializing mapper Mapper[User(users)], expression 'Exchange' failed to locate a name ('Exchange'). If this is a class name, consider adding this relationship() to the <class 'backend.app.models.user.User'> class after both dependent classes have been defined.
+
+bot-1       | Traceback (most recent call last):
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
+
+bot-1       |     response = await self.feed_update(bot, update, **kwargs)
+
+bot-1       |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
+
+bot-1       |     response = await self.update.wrap_outer_middleware(
+
+bot-1       |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
+
+bot-1       |     return await handler(event, data)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
+
+bot-1       |     return await handler(event, data)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
+
+bot-1       |     return await handler(event, data)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+
+bot-1       |     return await wrapped_inner(event, kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+
+bot-1       |     return await wrapped()
+
+bot-1       |            ^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
+
+bot-1       |     return await self.propagate_event(update_type=update_type, event=event, **kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+
+bot-1       |     return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+
+bot-1       |     return await self._propagate_event(
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
+
+bot-1       |     response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
+
+bot-1       |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
+
+bot-1       |     return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
+
+bot-1       |     return await self._propagate_event(
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
+
+bot-1       |     response = await observer.trigger(event, **kwargs)
+
+bot-1       |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
+
+bot-1       |     return await wrapped_inner(event, kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
+
+bot-1       |     return await wrapped()
+
+bot-1       |            ^^^^^^^^^^^^^^^
+
+bot-1       |   File "/app/backend/bot/handlers.py", line 46, in cmd_start
+
+bot-1       |     result = await db.execute(select(User).where(User.telegram_id == tg_user.id))
+
+bot-1       |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/session.py", line 461, in execute
+
+bot-1       |     result = await greenlet_spawn(
+
+bot-1       |              ^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 190, in greenlet_spawn
+
+bot-1       |     result = context.switch(*args, **kwargs)
+
+bot-1       |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+
+bot-1       |     return self._execute_internal(
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+
+bot-1       |     result: Result[Any] = compile_state_cls.orm_execute_statement(
+
+bot-1       |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 305, in orm_execute_statement
+
+bot-1       |     result = conn.execute(
+
+bot-1       |              ^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+
+bot-1       |     return meth(
+
+bot-1       |            ^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+
+bot-1       |     return connection._execute_clauseelement(
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1632, in _execute_clauseelement
+
+bot-1       |     compiled_sql, extracted_params, cache_hit = elem._compile_w_cache(
+
+bot-1       |                                                 ^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 703, in _compile_w_cache
+
+bot-1       |     compiled_sql = self._compiler(
+
+bot-1       |                    ^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 316, in _compiler
+
+bot-1       |     return dialect.statement_compiler(dialect, self, **kw)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 1429, in __init__
+
+bot-1       |     Compiled.__init__(self, dialect, statement, **kwargs)
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 870, in __init__
+
+bot-1       |     self.string = self.process(self.statement, **compile_kwargs)
+
+bot-1       |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 915, in process
+
+bot-1       |     return obj._compiler_dispatch(self, **kwargs)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/visitors.py", line 141, in _compiler_dispatch
+
+bot-1       |     return meth(self, **kw)  # type: ignore  # noqa: E501
+
+bot-1       |            ^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/compiler.py", line 4679, in visit_select
+
+bot-1       |     compile_state = select_stmt._compile_state_factory(
+
+bot-1       |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/base.py", line 683, in create_for_statement
+
+bot-1       |     return klass.create_for_statement(statement, compiler, **kw)
+
+bot-1       |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 1110, in create_for_statement
+
+bot-1       |     _QueryEntity.to_compile_state(
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 2565, in to_compile_state
+
+bot-1       |     _MapperEntity(
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 2645, in __init__
+
+bot-1       |     entity._post_inspect
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 1253, in __get__
+
+bot-1       |     obj.__dict__[self.__name__] = result = self.fget(obj)
+
+bot-1       |                                            ^^^^^^^^^^^^^^
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2722, in _post_inspect
+
+bot-1       |     self._check_configure()
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 2399, in _check_configure
+
+bot-1       |     _configure_registries({self.registry}, cascade=True)
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4215, in _configure_registries
+
+bot-1       |     _do_configure_registries(registries, cascade)
+
+bot-1       |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/mapper.py", line 4252, in _do_configure_registries
+
+bot-1       |     raise e
+
+bot-1       | sqlalchemy.exc.InvalidRequestError: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[User(users)]'. Original exception was: When initializing mapper Mapper[User(users)], expression 'Exchange' failed to locate a name ('Exchange'). If this is a class name, consider adding this relationship() to the <class 'backend.app.models.user.User'> class after both dependent classes have been defined.
+
+
+
+2) когда открываю mini app в telegram тоже оишбка:
+
+Blocked request. This host ("exchenger.ru") is not allowed. To allow this host, add "exchenger.ru" to `server.allowedHosts` in vite.config.js.
+
+
+
+исправь это 
