@@ -30,29 +30,44 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      {/* Overlay */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "var(--popup-overlay)" }}
+        onClick={onClose}
+      />
 
-      <div className="relative w-full max-w-lg bg-tg-bg rounded-t-2xl max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-tg-hint/20">
-          <h3 className="text-lg font-semibold text-tg-text">{title}</h3>
-          <button onClick={onClose} className="text-tg-hint text-2xl leading-none px-2">
-            &times;
+      {/* Modal */}
+      <div className="relative w-full max-w-md bg-ex-popup rounded-t-2xl max-h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-ex-divider">
+          <h3 className="text-base font-semibold text-ex-text font-primary">{title}</h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-ex-text-sec hover:bg-ex-hover transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M1 1L13 13M13 1L1 13" />
+            </svg>
           </button>
         </div>
 
+        {/* Search */}
         <div className="p-4 pb-2">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("search")}
-            className="w-full px-4 py-3 rounded-xl bg-tg-secondary-bg text-tg-text placeholder-tg-hint text-base"
+            className="w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
+                       text-sm border border-ex-divider font-primary"
           />
         </div>
 
-        <div className="overflow-y-auto flex-1 px-4 pb-4">
+        {/* List */}
+        <div className="overflow-y-auto flex-1 px-3 pb-4">
           {filtered.length === 0 ? (
-            <p className="text-center text-tg-hint py-8">{t("no_directions")}</p>
+            <p className="text-center text-ex-text-sec py-8 text-sm">{t("no_directions")}</p>
           ) : (
             filtered.map((option) => (
               <button
@@ -62,7 +77,8 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
                   onClose();
                   setSearch("");
                 }}
-                className="w-full text-left px-4 py-3 rounded-xl mb-1 hover:bg-tg-secondary-bg active:bg-tg-secondary-bg transition-colors text-tg-text"
+                className="w-full text-left px-4 py-3 rounded-xl mb-0.5 text-ex-text text-sm font-primary
+                           hover:bg-ex-hover active:bg-ex-selected transition-colors"
               >
                 {option.title}
               </button>
