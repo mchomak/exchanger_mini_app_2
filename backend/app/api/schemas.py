@@ -14,6 +14,8 @@ class UserSettingsResponse(BaseModel):
     default_currency_get: str = "Сбербанк RUB"
     notifications_enabled: bool = True
     language: str = "ru"
+    saved_full_name: Optional[str] = None
+    saved_email: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -54,6 +56,12 @@ class CreateExchangeRequest(BaseModel):
     amount: float = Field(..., gt=0)
     fields: Dict[str, str]
     user_telegram_id: int
+
+
+class SaveUserProfileRequest(BaseModel):
+    telegram_id: int
+    full_name: Optional[str] = None
+    email: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):

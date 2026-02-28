@@ -13,6 +13,7 @@ from backend.app.api.schemas import (
     CalculateResponse,
     CreateExchangeRequest,
     InitUserRequest,
+    SaveUserProfileRequest,
     UserResponse,
     UserSettingsResponse,
 )
@@ -25,6 +26,7 @@ from backend.app.services.exchanger import (
     calculate_exchange,
     create_exchange,
     get_bid_status,
+    get_direction_fields,
     get_directions_cached,
 )
 from backend.app.services.telegram_auth import validate_init_data
@@ -87,6 +89,8 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
             default_currency_get=user.settings.default_currency_get,
             notifications_enabled=user.settings.notifications_enabled,
             language=user.settings.language,
+            saved_full_name=user.settings.saved_full_name,
+            saved_email=user.settings.saved_email,
         )
 
     return UserResponse(
@@ -208,6 +212,37 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting status for {hash}: {e}")
         raise _error(f"Status check failed: {e}", 500)
+
+
+@router.get("/exchange/direction/{direction_id}/fields")
+async def get_fields(direction_id: str):
+    """Get required and optional fields for an exchange direction."""
+    try:
+        fields_data = get_direction_fields(direction_id)
+        return fields_data
+    except Exception as e:
+        logger.error(f"Error fetching fields for direction {direction_id}: {e}")
+        raise _error(f"Failed to fetch direction fields: {e}", 500)
+
+
+# ── User Profile ─────────────────────────────────────────────────────────────
+
+@router.post("/users/profile/save")
+async def save_user_profile(body: SaveUserProfileRequest, db: AsyncSession = Depends(get_db)):
+    """Save user profile fields (full_name, email) for auto-fill."""
+    result = await db.execute(select(User).where(User.telegram_id == body.telegram_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise _error("User not found", 404)
+
+    if user.settings:
+        if body.full_name is not None:
+            user.settings.saved_full_name = body.full_name
+        if body.email is not None:
+            user.settings.saved_email = body.email
+        await db.commit()
+
+    return {"ok": True}
 
 
 # ── Translations ──────────────────────────────────────────────────────────────

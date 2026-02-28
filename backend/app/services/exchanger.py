@@ -64,6 +64,25 @@ def calculate_exchange(direction_id: str, amount: float, calc_action: str = "giv
     }
 
 
+def get_direction_fields(direction_id: str) -> Dict:
+    """Get required and optional fields for a direction."""
+    api = get_api()
+    direction_info = api.get_direction(direction_id)
+
+    def _format_field(f: Dict, required: bool) -> Dict:
+        return {
+            "name": f.get("name", ""),
+            "label": f.get("label", f.get("name", "")),
+            "type": f.get("type", "text"),
+            "req": required,
+        }
+
+    required = [_format_field(f, True) for f in direction_info.required_fields]
+    optional = [_format_field(f, False) for f in direction_info.optional_fields]
+
+    return {"required_fields": required, "optional_fields": optional}
+
+
 def create_exchange(direction_id: str, amount: float, fields: Dict[str, str], action: str = "give") -> Dict:
     """Create an exchange bid."""
     api = get_api()
