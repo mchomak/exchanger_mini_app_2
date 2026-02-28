@@ -39,6 +39,30 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Фоновые линии — положи свой PNG в frontend/public/bg-lines.png
+ * mix-blend-mode: screen убирает чёрный фон, оставляя только светлые линии
+ * Меняй opacity (0.0 – 1.0) чтобы подобрать нужную интенсивность
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("/bg-lines.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
 input:focus {
   outline: none;
 }
