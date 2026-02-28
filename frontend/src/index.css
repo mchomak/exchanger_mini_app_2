@@ -2,14 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --font: "Rubik", sans-serif;
+  --font-secondary: "Unbounded", sans-serif;
+
+  --text: #ffffff;
+  --text-secondary: #709293;
+  --accent: #ffcc9d;
+  --positive: #3bb57a;
+  --error: #b93131;
+  --divider: rgba(255, 255, 255, 0.08);
+
+  --bg: linear-gradient(270deg, #04161a 0%, #134143 100%);
+  --block-bg: #256362;
+  --block-bg-small: #224748;
+  --widget-bg: #1b5554;
+  --form-bg: #256362;
+  --popup-bg: #4c7879;
+  --popup-overlay: rgba(15, 28, 31, 0.8);
+
+  --hover: rgba(255, 255, 255, 0.1);
+  --selected: rgba(255, 255, 255, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--tg-theme-bg-color, #ffffff);
-  color: var(--tg-theme-text-color, #000000);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 input:focus {
   outline: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }

@@ -3,15 +3,25 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        primary: ["Rubik", "sans-serif"],
+        secondary: ["Unbounded", "sans-serif"],
+      },
       colors: {
-        tg: {
-          bg: "var(--tg-theme-bg-color, #ffffff)",
-          text: "var(--tg-theme-text-color, #000000)",
-          hint: "var(--tg-theme-hint-color, #999999)",
-          link: "var(--tg-theme-link-color, #2481cc)",
-          button: "var(--tg-theme-button-color, #2481cc)",
-          "button-text": "var(--tg-theme-button-text-color, #ffffff)",
-          "secondary-bg": "var(--tg-theme-secondary-bg-color, #f0f0f0)",
+        ex: {
+          text: "#ffffff",
+          "text-sec": "#709293",
+          accent: "#ffcc9d",
+          positive: "#3bb57a",
+          error: "#b93131",
+          divider: "rgba(255, 255, 255, 0.08)",
+          block: "#256362",
+          "block-sm": "#224748",
+          widget: "#1b5554",
+          form: "#256362",
+          popup: "#4c7879",
+          hover: "rgba(255, 255, 255, 0.1)",
+          selected: "rgba(255, 255, 255, 0.2)",
         },
       },
     },

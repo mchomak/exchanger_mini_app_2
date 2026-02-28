@@ -50,11 +50,9 @@ export function ExchangeCalculator({ userSettings }: Props) {
       .map((d) => ({ code: d.currency_get_title, title: d.currency_get_title }));
   }, [directions, currencyGive]);
 
-  // Load directions on mount
   useEffect(() => {
     getDirections().then((dirs) => {
       if (dirs.length === 0) return;
-
       const defaultGive = userSettings?.default_currency_give || "USDT TRC20";
       const defaultGet = userSettings?.default_currency_get || "Сбербанк RUB";
       const giveLower = defaultGive.toLowerCase();
@@ -73,7 +71,6 @@ export function ExchangeCalculator({ userSettings }: Props) {
     });
   }, [getDirections, userSettings]);
 
-  // Recalculate when direction changes
   useEffect(() => {
     if (!currentDirection) return;
     const amount = parseFloat(amountGive);
@@ -157,6 +154,29 @@ export function ExchangeCalculator({ userSettings }: Props) {
     [directions, currencyGive]
   );
 
+  // Swap currencies
+  const handleSwap = useCallback(() => {
+    const newDir = directions.find(
+      (d) => d.currency_give_title === currencyGet && d.currency_get_title === currencyGive
+    );
+    if (!newDir) return; // reverse direction doesn't exist
+
+    const prevGive = currencyGive;
+    const prevGet = currencyGet;
+    const prevAmountGive = amountGive;
+
+    setCurrencyGive(prevGet);
+    setCurrencyGet(prevGive);
+    setAmountGive(prevAmountGive);
+    setCurrentDirection(newDir);
+  }, [directions, currencyGive, currencyGet, amountGive]);
+
+  const swapAvailable = useMemo(() => {
+    return directions.some(
+      (d) => d.currency_give_title === currencyGet && d.currency_get_title === currencyGive
+    );
+  }, [directions, currencyGive, currencyGet]);
+
   const handleExchange = useCallback(() => {
     alert(t("feature_in_development"));
   }, [t]);
@@ -168,90 +188,128 @@ export function ExchangeCalculator({ userSettings }: Props) {
 
   if (directionsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-screen">
         <Loader />
       </div>
     );
   }
 
   return (
-    <div className="p-4 max-w-lg mx-auto">
-      {/* Give field */}
-      <div className="mb-4">
-        <label className="block text-sm text-tg-hint mb-2">{t("you_give")}</label>
-        <div className="flex items-center bg-tg-secondary-bg rounded-xl overflow-hidden">
-          <input
-            type="number"
-            inputMode="decimal"
-            value={amountGive}
-            onChange={(e) => handleAmountGiveChange(e.target.value)}
-            className="flex-1 bg-transparent px-4 py-4 text-lg text-tg-text min-w-0"
-            placeholder="0"
-          />
+    <div className="min-h-screen flex flex-col justify-center px-4 py-6 max-w-md mx-auto">
+      {/* Logo / Title */}
+      <h1 className="font-secondary text-xl font-bold text-center text-ex-accent mb-8 tracking-wide">
+        SAPSANEX
+      </h1>
+
+      {/* Card */}
+      <div className="bg-ex-block rounded-2xl p-5 shadow-lg">
+        {/* Give field */}
+        <div className="mb-1">
+          <label className="block text-xs font-medium text-ex-text-sec mb-2 uppercase tracking-wider">
+            {t("you_give")}
+          </label>
+          <div className="flex items-center bg-ex-block-sm rounded-xl overflow-hidden border border-ex-divider">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amountGive}
+              onChange={(e) => handleAmountGiveChange(e.target.value)}
+              className="flex-1 bg-transparent px-4 py-4 text-xl font-medium text-ex-text min-w-0 placeholder-ex-text-sec"
+              placeholder="0"
+            />
+            <button
+              onClick={() => setModalGiveOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-4 text-ex-accent font-medium whitespace-nowrap text-sm transition-colors hover:bg-ex-hover active:bg-ex-selected"
+            >
+              <span>{currencyGive || "..."}</span>
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" className="opacity-60">
+                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Swap button */}
+        <div className="flex justify-center -my-2 relative z-10">
           <button
-            onClick={() => setModalGiveOpen(true)}
-            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap border-l border-tg-hint/20 text-sm"
+            onClick={handleSwap}
+            disabled={!swapAvailable}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all
+              ${swapAvailable
+                ? "bg-ex-accent text-ex-block-sm hover:scale-110 active:scale-95 shadow-md"
+                : "bg-ex-block-sm text-ex-text-sec cursor-not-allowed opacity-40"
+              }`}
           >
-            {currencyGive || "..."} ▼
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 16V4M7 4L3 8M7 4L11 8" />
+              <path d="M17 8V20M17 20L21 16M17 20L13 16" />
+            </svg>
           </button>
         </div>
-      </div>
 
-      {/* Get field */}
-      <div className="mb-4">
-        <label className="block text-sm text-tg-hint mb-2">{t("you_get")}</label>
-        <div className="flex items-center bg-tg-secondary-bg rounded-xl overflow-hidden">
-          <input
-            type="number"
-            inputMode="decimal"
-            value={amountGet}
-            onChange={(e) => handleAmountGetChange(e.target.value)}
-            className="flex-1 bg-transparent px-4 py-4 text-lg text-tg-text min-w-0"
-            placeholder="0"
-          />
-          <button
-            onClick={() => setModalGetOpen(true)}
-            className="px-4 py-4 text-tg-link font-medium whitespace-nowrap border-l border-tg-hint/20 text-sm"
-          >
-            {currencyGet || "..."} ▼
-          </button>
+        {/* Get field */}
+        <div className="mt-1">
+          <label className="block text-xs font-medium text-ex-text-sec mb-2 uppercase tracking-wider">
+            {t("you_get")}
+          </label>
+          <div className="flex items-center bg-ex-block-sm rounded-xl overflow-hidden border border-ex-divider">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amountGet}
+              onChange={(e) => handleAmountGetChange(e.target.value)}
+              className="flex-1 bg-transparent px-4 py-4 text-xl font-medium text-ex-text min-w-0 placeholder-ex-text-sec"
+              placeholder="0"
+            />
+            <button
+              onClick={() => setModalGetOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-4 text-ex-accent font-medium whitespace-nowrap text-sm transition-colors hover:bg-ex-hover active:bg-ex-selected"
+            >
+              <span>{currencyGet || "..."}</span>
+              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" className="opacity-60">
+                <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Rate & info */}
+        <div className="mt-4 space-y-1">
+          {calcLoading ? (
+            <Loader />
+          ) : (
+            calcResult && (
+              <>
+                <p className="text-sm text-ex-accent text-center font-medium">
+                  {t("rate")}: {rateText}
+                </p>
+                {calcResult.min_give !== "no" && (
+                  <p className="text-xs text-ex-text-sec text-center">
+                    {t("min_amount")}: {calcResult.min_give} · {t("max_amount")}: {calcResult.max_give}{" "}
+                    {calcResult.currency_give}
+                  </p>
+                )}
+                {calcResult.reserve !== "no" && (
+                  <p className="text-xs text-ex-text-sec text-center">
+                    {t("reserve")}: {calcResult.reserve} {calcResult.currency_get}
+                  </p>
+                )}
+              </>
+            )
+          )}
+        </div>
+
+        {/* Exchange button */}
+        <button
+          onClick={handleExchange}
+          className="w-full mt-5 py-4 rounded-xl bg-ex-accent text-ex-block-sm font-semibold text-base
+                     active:scale-[0.98] transition-transform shadow-md font-primary"
+        >
+          {t("exchange_button")}
+        </button>
       </div>
 
-      {/* Rate & info */}
-      <div className="mb-6 space-y-1">
-        {calcLoading ? (
-          <Loader />
-        ) : (
-          calcResult && (
-            <>
-              <p className="text-sm text-tg-hint text-center">
-                {t("rate")}: {rateText}
-              </p>
-              {calcResult.min_give !== "no" && (
-                <p className="text-xs text-tg-hint text-center">
-                  {t("min_amount")}: {calcResult.min_give} · {t("max_amount")}: {calcResult.max_give}{" "}
-                  {calcResult.currency_give}
-                </p>
-              )}
-              {calcResult.reserve !== "no" && (
-                <p className="text-xs text-tg-hint text-center">
-                  {t("reserve")}: {calcResult.reserve} {calcResult.currency_get}
-                </p>
-              )}
-            </>
-          )
-        )}
-      </div>
-
-      {/* Exchange button */}
-      <button
-        onClick={handleExchange}
-        className="w-full py-4 rounded-xl bg-tg-button text-tg-button-text font-semibold text-lg active:opacity-80 transition-opacity"
-      >
-        {t("exchange_button")}
-      </button>
-
+      {/* Modals */}
       <CurrencyModal
         open={modalGiveOpen}
         onClose={() => setModalGiveOpen(false)}
