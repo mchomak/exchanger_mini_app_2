@@ -8,9 +8,17 @@ import type { CalcResult, Direction, UserSettings } from "../types";
 
 interface Props {
   userSettings: UserSettings | null;
+  onGoToConfirm?: (data: {
+    calcResult: CalcResult;
+    amountGive: string;
+    amountGet: string;
+    currencyGive: string;
+    currencyGet: string;
+    directionId: string;
+  }) => void;
 }
 
-export function ExchangeCalculator({ userSettings }: Props) {
+export function ExchangeCalculator({ userSettings, onGoToConfirm }: Props) {
   const { t } = useTranslation();
   const { directions, loading: directionsLoading, getDirections, calculate } = useExchanger();
 
@@ -177,9 +185,41 @@ export function ExchangeCalculator({ userSettings }: Props) {
     );
   }, [directions, currencyGive, currencyGet]);
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleExchange = useCallback(() => {
-    alert(t("feature_in_development"));
-  }, [t]);
+    setValidationError(null);
+
+    if (!calcResult || !currentDirection) return;
+
+    const amount = parseFloat(amountGive);
+    if (isNaN(amount) || amount <= 0) return;
+
+    // Validate min/max amounts
+    if (calcResult.min_give !== "no") {
+      const min = parseFloat(calcResult.min_give);
+      if (!isNaN(min) && amount < min) {
+        setValidationError(`${t("error_amount_min")} ${calcResult.min_give} ${calcResult.currency_give}`);
+        return;
+      }
+    }
+    if (calcResult.max_give !== "no") {
+      const max = parseFloat(calcResult.max_give);
+      if (!isNaN(max) && amount > max) {
+        setValidationError(`${t("error_amount_max")} ${calcResult.max_give} ${calcResult.currency_give}`);
+        return;
+      }
+    }
+
+    onGoToConfirm?.({
+      calcResult,
+      amountGive,
+      amountGet,
+      currencyGive,
+      currencyGet,
+      directionId: currentDirection.direction_id,
+    });
+  }, [calcResult, currentDirection, amountGive, amountGet, currencyGive, currencyGet, t, onGoToConfirm]);
 
   const rateText = useMemo(() => {
     if (!calcResult) return "";
@@ -298,6 +338,11 @@ export function ExchangeCalculator({ userSettings }: Props) {
             )
           )}
         </div>
+
+        {/* Validation error */}
+        {validationError && (
+          <p className="mt-3 text-sm text-ex-error text-center font-medium">{validationError}</p>
+        )}
 
         {/* Exchange button */}
         <button

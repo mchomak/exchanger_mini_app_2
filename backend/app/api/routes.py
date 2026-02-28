@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.app.api.schemas import (
     CalculateRequest,
@@ -19,6 +20,7 @@ from backend.app.core.database import get_db
 from backend.app.models.exchange import Exchange
 from backend.app.models.user import User
 from backend.app.models.user_settings import UserSettings
+from backend.app.services.bot_notify import send_order_created, send_order_error, send_order_paid
 from backend.app.services.exchanger import (
     calculate_exchange,
     create_exchange,
@@ -155,6 +157,13 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
         db.add(exchange)
         await db.commit()
         logger.info(f"Exchange created: hash={bid_data.get('hash')}")
+
+        # Send bot notification about order creation
+        try:
+            await send_order_created(body.user_telegram_id, bid_data)
+        except Exception as notify_err:
+            logger.error(f"Failed to send order notification: {notify_err}")
+
         return bid_data
     except HTTPException:
         raise
@@ -169,13 +178,31 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
     try:
         status_data = get_bid_status(hash)
 
-        result = await db.execute(select(Exchange).where(Exchange.exchanger_order_hash == hash))
+        result = await db.execute(
+            select(Exchange)
+            .where(Exchange.exchanger_order_hash == hash)
+            .options(selectinload(Exchange.user))
+        )
         exchange = result.scalar_one_or_none()
         if exchange and exchange.status != status_data.get("status_title"):
-            exchange.status = status_data.get("status_title")
+            old_status = exchange.status
+            new_status = status_data.get("status_title", "")
+            exchange.status = new_status
             exchange.updated_at = datetime.utcnow()
             await db.commit()
-            logger.info(f"Exchange {hash} status updated: {status_data.get('status_title')}")
+            logger.info(f"Exchange {hash} status updated: {old_status} -> {new_status}")
+
+            # Send bot notification on status change
+            if exchange.user:
+                telegram_id = exchange.user.telegram_id
+                try:
+                    new_lower = new_status.lower()
+                    if any(kw in new_lower for kw in ("оплач", "выполн", "paid", "done", "complet")):
+                        await send_order_paid(telegram_id, status_data)
+                    elif any(kw in new_lower for kw in ("ошибк", "отмен", "error", "cancel", "reject")):
+                        await send_order_error(telegram_id, status_data)
+                except Exception as notify_err:
+                    logger.error(f"Failed to send status notification: {notify_err}")
 
         return status_data
     except Exception as e:

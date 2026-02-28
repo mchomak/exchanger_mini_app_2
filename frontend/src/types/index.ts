@@ -40,4 +40,20 @@ export interface UserSettings {
   language: string;
 }
 
+export interface OrderData {
+  id: string;
+  hash: string;
+  url: string;
+  status: string;
+  status_title: string;
+  amount_give: string;
+  amount_get: string;
+  currency_give: string;
+  currency_get: string;
+  can_pay_via_api: boolean;
+  can_cancel: boolean;
+  payment_url: string | null;
+  payment_type: string;
+}
+
 export type Translations = Record<string, string>;
