@@ -41,6 +41,22 @@ export const api = {
     });
   },
 
+  createOrder(directionId: string, amount: number, fields: Record<string, string>, userTelegramId: number) {
+    return request<import("../types").OrderData>("/exchange/create", {
+      method: "POST",
+      body: JSON.stringify({
+        direction_id: directionId,
+        amount,
+        fields,
+        user_telegram_id: userTelegramId,
+      }),
+    });
+  },
+
+  getOrderStatus(hash: string) {
+    return request<import("../types").OrderData>(`/exchange/${hash}/status`);
+  },
+
   getTranslations(language: string) {
     return request<import("../types").Translations>(`/translations/${language}`);
   },

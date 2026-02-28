@@ -92,10 +92,15 @@ def get_bid_status(hash: str) -> Dict:
     return {
         "id": bid.id,
         "hash": bid.hash,
+        "url": bid.url,
         "status": bid.status,
         "status_title": bid.status_title,
         "amount_give": bid.amount_give,
         "amount_get": bid.amount_get,
         "currency_give": bid.currency_give,
         "currency_get": bid.currency_get,
+        "can_pay_via_api": bid.can_pay_via_api,
+        "can_cancel": bid.can_cancel_via_api,
+        "payment_url": bid.payment_url,
+        "payment_type": bid.payment_type,
     }
