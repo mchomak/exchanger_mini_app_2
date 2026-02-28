@@ -41,6 +41,23 @@ export const api = {
     });
   },
 
+  getDirectionFields(directionId: string) {
+    return request<import("../types").DirectionFieldsResponse>(
+      `/exchange/direction/${directionId}/fields`
+    );
+  },
+
+  saveUserProfile(telegramId: number, fullName: string | null, email: string | null) {
+    return request<{ ok: boolean }>("/users/profile/save", {
+      method: "POST",
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        full_name: fullName,
+        email,
+      }),
+    });
+  },
+
   createOrder(directionId: string, amount: number, fields: Record<string, string>, userTelegramId: number) {
     return request<import("../types").OrderData>("/exchange/create", {
       method: "POST",

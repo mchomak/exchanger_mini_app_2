@@ -4,11 +4,12 @@ import { useTelegram } from "./hooks/useTelegram";
 import { api } from "./api/client";
 import { ExchangeCalculator } from "./components/ExchangeCalculator";
 import { ConfirmationView } from "./components/ConfirmationView";
+import { FieldsForm } from "./components/FieldsForm";
 import { OrderStatus } from "./components/OrderStatus";
 import { Loader } from "./components/Loader";
 import type { CalcResult, OrderData, UserData } from "./types";
 
-type AppView = "calculator" | "confirmation" | "order";
+type AppView = "calculator" | "confirmation" | "fields" | "order";
 
 interface ConfirmData {
   calcResult: CalcResult;
@@ -27,6 +28,7 @@ function AppContent() {
 
   const [view, setView] = useState<AppView>("calculator");
   const [confirmData, setConfirmData] = useState<ConfirmData | null>(null);
+  const [exchangeFields, setExchangeFields] = useState<Record<string, string>>({});
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
 
@@ -58,37 +60,54 @@ function AppContent() {
     setView("calculator");
   }, []);
 
-  // Confirmation → Create Order → Order Status
-  const handleConfirmOrder = useCallback(async () => {
-    if (!confirmData) return;
+  // Confirmation → Fields Form
+  const handleGoToFields = useCallback(() => {
+    setView("fields");
+  }, []);
 
-    const telegramId = userData?.telegram_id || user?.id;
-    if (!telegramId) {
-      setError("Telegram ID not found");
-      return;
-    }
+  // Fields Form → Back to Confirmation
+  const handleBackToConfirm = useCallback(() => {
+    setView("confirmation");
+  }, []);
 
-    setOrderLoading(true);
-    try {
-      const result = await api.createOrder(
-        confirmData.directionId,
-        parseFloat(confirmData.amountGive),
-        {}, // fields — пустой объект, так как поля не требуются для базового обмена
-        telegramId
-      );
-      setOrderData(result);
-      setView("order");
-    } catch (err: any) {
-      setError(err.message || "Order creation failed");
-    } finally {
-      setOrderLoading(false);
-    }
-  }, [confirmData, userData, user]);
+  // Fields Form → Create Order → Order Status
+  const handleFieldsSubmit = useCallback(
+    async (fields: Record<string, string>) => {
+      if (!confirmData) return;
+
+      const telegramId = userData?.telegram_id || user?.id;
+      if (!telegramId) {
+        setError("Telegram ID not found");
+        return;
+      }
+
+      setExchangeFields(fields);
+      setOrderLoading(true);
+      setView("order"); // show loading state in order view
+
+      try {
+        const result = await api.createOrder(
+          confirmData.directionId,
+          parseFloat(confirmData.amountGive),
+          fields,
+          telegramId
+        );
+        setOrderData(result);
+      } catch (err: any) {
+        setError(err.message || "Order creation failed");
+        setView("fields"); // go back to fields on error
+      } finally {
+        setOrderLoading(false);
+      }
+    },
+    [confirmData, userData, user]
+  );
 
   // Order Status → New Exchange
   const handleNewExchange = useCallback(() => {
     setOrderData(null);
     setConfirmData(null);
+    setExchangeFields({});
     setView("calculator");
   }, []);
 
@@ -125,14 +144,38 @@ function AppContent() {
         amountGet={confirmData.amountGet}
         currencyGive={confirmData.currencyGive}
         currencyGet={confirmData.currencyGet}
-        onConfirm={handleConfirmOrder}
+        onConfirm={handleGoToFields}
         onBack={handleBackToCalc}
-        loading={orderLoading}
+        loading={false}
       />
     );
   }
 
-  if (view === "order" && orderData) {
+  if (view === "fields" && confirmData) {
+    const telegramId = userData?.telegram_id || user?.id || 0;
+    return (
+      <FieldsForm
+        directionId={confirmData.directionId}
+        currencyGive={confirmData.currencyGive}
+        currencyGet={confirmData.currencyGet}
+        telegramUsername={user?.username ?? null}
+        savedFullName={userData?.settings?.saved_full_name ?? null}
+        savedEmail={userData?.settings?.saved_email ?? null}
+        telegramId={telegramId}
+        onSubmit={handleFieldsSubmit}
+        onBack={handleBackToConfirm}
+      />
+    );
+  }
+
+  if (view === "order") {
+    if (orderLoading || !orderData) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <Loader />
+        </div>
+      );
+    }
     return <OrderStatus order={orderData} onNewExchange={handleNewExchange} />;
   }
 

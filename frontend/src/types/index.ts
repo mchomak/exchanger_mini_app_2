@@ -38,6 +38,20 @@ export interface UserSettings {
   default_currency_get: string;
   notifications_enabled: boolean;
   language: string;
+  saved_full_name: string | null;
+  saved_email: string | null;
+}
+
+export interface DirectionField {
+  name: string;
+  label: string;
+  type: string;
+  req: boolean;
+}
+
+export interface DirectionFieldsResponse {
+  required_fields: DirectionField[];
+  optional_fields: DirectionField[];
 }
 
 export interface OrderData {

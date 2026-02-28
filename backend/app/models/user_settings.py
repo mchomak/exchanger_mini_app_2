@@ -15,5 +15,7 @@ class UserSettings(Base):
     default_currency_get: Mapped[str] = mapped_column(String(20), default="Сбербанк RUB")
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     language: Mapped[str] = mapped_column(String(10), default="ru")
+    saved_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    saved_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="settings")
