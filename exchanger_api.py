@@ -405,6 +405,9 @@ class ExchangerAPI:
             if error_val != "0":
                 error_text = str(data.get("error_text", "")).strip()
                 error_lower = error_text.lower()
+                # Всегда логируем error_fields при ошибке для диагностики
+                if data.get("error_fields"):
+                    logger.error(f"← {method} error_fields: {data['error_fields']}")
 
                 # Классифицируем ошибку по тексту
                 if "direction not found" in error_lower:
@@ -428,6 +431,18 @@ class ExchangerAPI:
                         error_code=error_val, method=method,
                     )
                 else:
+                    # Include error_fields detail in the message so callers can see exactly what failed
+                    error_fields = data.get("error_fields")
+                    if error_fields and isinstance(error_fields, dict):
+                        field_details = "; ".join(
+                            f"{k}: {v}" for k, v in error_fields.items() if v
+                        )
+                        if field_details:
+                            logger.debug(f"error_fields: {error_fields}")
+                            detail_msg = f"{error_text or 'Ошибка'} | Поля: {field_details}"
+                            raise APIResponseError(
+                                detail_msg, error_code=error_val, method=method,
+                            )
                     raise APIResponseError(
                         error_text or f"Неизвестная ошибка (code={error_val})",
                         error_code=error_val, method=method,
@@ -1034,9 +1049,9 @@ class ExchangerAPI:
         # 1. Расчёт
         calc = self.calculate(direction_id, amount, action)
         if calc.changed:
-            logger.warning(
-                f"Сумма {amount} вне лимитов ({calc.min_give}–{calc.max_give}). "
-                f"API скорректирует при создании заявки."
+            raise ValidationError(
+                f"Сумма {amount} вне допустимых лимитов направления {direction_id}. "
+                f"Допустимый диапазон: {calc.min_give}–{calc.max_give} {calc.currency_give}."
             )
 
         # 2. Валидация полей
