@@ -15,7 +15,6 @@ from aiogram.types import (
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
-    WebAppInfo,
 )
 from sqlalchemy import select
 
@@ -47,8 +46,6 @@ def _lang(code: str | None) -> str:
 def _main_keyboard(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=get_phrase("open_app_button", lang, source="bot"),
-                            web_app=WebAppInfo(url=settings.webapp_url))],
             [KeyboardButton(text=get_phrase("profile_button", lang, source="bot"))],
         ],
         resize_keyboard=True,

@@ -100,7 +100,17 @@ export function FieldsForm({
           } else if (isEmailField(f.label) && savedEmail) {
             initial[f.name] = savedEmail;
           } else if (isPhoneField(f.label) && savedPhone) {
-            initial[f.name] = savedPhone;
+            // Ensure saved phone has +7 prefix
+            const digits = savedPhone.replace(/[^\d+]/g, "");
+            if (digits.startsWith("+")) {
+              initial[f.name] = digits;
+            } else if (digits.startsWith("8") && digits.length === 11) {
+              initial[f.name] = "+7" + digits.slice(1);
+            } else if (digits.startsWith("7") && digits.length === 11) {
+              initial[f.name] = "+" + digits;
+            } else {
+              initial[f.name] = "+7" + digits;
+            }
           } else {
             initial[f.name] = "";
           }
@@ -137,8 +147,32 @@ export function FieldsForm({
       .every((f) => values[f.name]?.trim());
   }, [visibleFields, values]);
 
-  const handleChange = (name: string, value: string) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (name: string, value: string, field?: DirectionField) => {
+    let newValue = value;
+
+    // Auto-prepend +7 for phone fields
+    if (field && isPhoneField(field.label)) {
+      // Strip all non-digit characters except +
+      const digits = value.replace(/[^\d+]/g, "");
+
+      if (digits === "" || digits === "+") {
+        newValue = "";
+      } else if (!digits.startsWith("+")) {
+        // User typed digits without +7 prefix — add it
+        if (digits.startsWith("7") && digits.length > 1) {
+          newValue = "+" + digits;
+        } else if (digits.startsWith("8") && digits.length > 1) {
+          // Replace leading 8 with +7
+          newValue = "+7" + digits.slice(1);
+        } else {
+          newValue = "+7" + digits;
+        }
+      } else {
+        newValue = digits;
+      }
+    }
+
+    setValues((prev) => ({ ...prev, [name]: newValue }));
     if (fieldErrors[name]) {
       setFieldErrors((prev) => {
         const next = { ...prev };
@@ -253,11 +287,11 @@ export function FieldsForm({
             <input
               type={mapInputType(field)}
               value={values[field.name] || ""}
-              onChange={(e) => handleChange(field.name, e.target.value)}
+              onChange={(e) => handleChange(field.name, e.target.value, field)}
               className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
                          text-sm border font-primary transition-colors
                          ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
-              placeholder={field.label}
+              placeholder={isPhoneField(field.label) ? "+7" : field.label}
             />
             {fieldErrors[field.name] && (
               <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
@@ -280,11 +314,11 @@ export function FieldsForm({
                 <input
                   type={mapInputType(field)}
                   value={values[field.name] || ""}
-                  onChange={(e) => handleChange(field.name, e.target.value)}
+                  onChange={(e) => handleChange(field.name, e.target.value, field)}
                   className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
                              text-sm border font-primary transition-colors
                              ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
-                  placeholder={field.label}
+                  placeholder={isPhoneField(field.label) ? "+7" : field.label}
                 />
                 {fieldErrors[field.name] && (
                   <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
