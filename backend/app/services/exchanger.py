@@ -85,8 +85,14 @@ def get_direction_fields(direction_id: str) -> Dict:
 
 def create_exchange(direction_id: str, amount: float, fields: Dict[str, str], action: str = "give") -> Dict:
     """Create an exchange bid."""
+    logger.debug(f"create_exchange called: direction={direction_id}, amount={amount}, fields={fields}")
     api = get_api()
-    bid = api.full_exchange(direction_id=direction_id, amount=amount, fields=fields, action=action)
+    try:
+        bid = api.full_exchange(direction_id=direction_id, amount=amount, fields=fields, action=action)
+    except Exception as e:
+        logger.error(f"full_exchange failed: {e}", exc_info=True)
+        raise
+    logger.debug(f"Bid created: id={bid.id}, hash={bid.hash}, status={bid.status_title}")
     return {
         "id": bid.id,
         "hash": bid.hash,

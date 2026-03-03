@@ -17,5 +17,6 @@ class UserSettings(Base):
     language: Mapped[str] = mapped_column(String(10), default="ru")
     saved_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     saved_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    saved_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="settings")

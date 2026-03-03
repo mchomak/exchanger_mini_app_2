@@ -161,6 +161,7 @@ function AppContent() {
         telegramUsername={user?.username ?? null}
         savedFullName={userData?.settings?.saved_full_name ?? null}
         savedEmail={userData?.settings?.saved_email ?? null}
+        savedPhone={userData?.settings?.saved_phone ?? null}
         telegramId={telegramId}
         onSubmit={handleFieldsSubmit}
         onBack={handleBackToConfirm}

@@ -12,12 +12,14 @@ LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
 
 def setup_logging() -> None:
     """Configure logging with INFO and DEBUG file handlers + console."""
+    debug_mode = os.environ.get("DEBUG", "false").lower() in ("true", "1", "yes")
+
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 
-    # Console handler — INFO level
+    # Console handler — DEBUG if debug mode, else INFO
     console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
+    console.setLevel(logging.DEBUG if debug_mode else logging.INFO)
     console.setFormatter(logging.Formatter(LOG_FORMAT))
     root_logger.addHandler(console)
 

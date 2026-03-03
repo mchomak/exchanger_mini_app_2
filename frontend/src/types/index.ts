@@ -40,6 +40,7 @@ export interface UserSettings {
   language: string;
   saved_full_name: string | null;
   saved_email: string | null;
+  saved_phone: string | null;
 }
 
 export interface DirectionField {

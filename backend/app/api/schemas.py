@@ -16,6 +16,7 @@ class UserSettingsResponse(BaseModel):
     language: str = "ru"
     saved_full_name: Optional[str] = None
     saved_email: Optional[str] = None
+    saved_phone: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -62,6 +63,7 @@ class SaveUserProfileRequest(BaseModel):
     telegram_id: int
     full_name: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):

@@ -47,13 +47,14 @@ export const api = {
     );
   },
 
-  saveUserProfile(telegramId: number, fullName: string | null, email: string | null) {
+  saveUserProfile(telegramId: number, fullName: string | null, email: string | null, phone: string | null) {
     return request<{ ok: boolean }>("/users/profile/save", {
       method: "POST",
       body: JSON.stringify({
         telegram_id: telegramId,
         full_name: fullName,
         email,
+        phone,
       }),
     });
   },
