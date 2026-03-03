@@ -229,9 +229,15 @@ export function FieldsForm({
     }
 
     // Build final fields dict (include telegram auto-filled)
+    // For phone fields: strip "+" before sending — API expects digits only
+    const phoneFieldNames = new Set(
+      allFields.filter((f) => isPhoneField(f.label)).map((f) => f.name)
+    );
     const result: Record<string, string> = {};
     for (const [key, val] of Object.entries(values)) {
-      if (val.trim()) result[key] = val.trim();
+      const trimmed = val.trim();
+      if (!trimmed) continue;
+      result[key] = phoneFieldNames.has(key) ? trimmed.replace(/^\+/, "") : trimmed;
     }
     onSubmit(result);
   };
