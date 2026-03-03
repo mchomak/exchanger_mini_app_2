@@ -91,6 +91,7 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
             language=user.settings.language,
             saved_full_name=user.settings.saved_full_name,
             saved_email=user.settings.saved_email,
+            saved_phone=user.settings.saved_phone,
         )
 
     return UserResponse(
@@ -140,7 +141,10 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
             raise _error("User not found", 404)
 
         logger.info(f"Creating exchange: user={body.user_telegram_id}, direction={body.direction_id}")
+        logger.debug(f"Exchange fields: {body.fields}")
+        logger.debug(f"Exchange amount: {body.amount}")
         bid_data = create_exchange(body.direction_id, body.amount, body.fields)
+        logger.debug(f"Exchange API response: {bid_data}")
 
         exchange = Exchange(
             user_id=user.id,
@@ -240,6 +244,8 @@ async def save_user_profile(body: SaveUserProfileRequest, db: AsyncSession = Dep
             user.settings.saved_full_name = body.full_name
         if body.email is not None:
             user.settings.saved_email = body.email
+        if body.phone is not None:
+            user.settings.saved_phone = body.phone
         await db.commit()
 
     return {"ok": True}

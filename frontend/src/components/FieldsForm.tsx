@@ -11,6 +11,7 @@ interface Props {
   telegramUsername: string | null;
   savedFullName: string | null;
   savedEmail: string | null;
+  savedPhone: string | null;
   telegramId: number;
   onSubmit: (fields: Record<string, string>) => void;
   onBack: () => void;
@@ -67,6 +68,7 @@ export function FieldsForm({
   telegramUsername,
   savedFullName,
   savedEmail,
+  savedPhone,
   telegramId,
   onSubmit,
   onBack,
@@ -97,6 +99,8 @@ export function FieldsForm({
             initial[f.name] = savedFullName;
           } else if (isEmailField(f.label) && savedEmail) {
             initial[f.name] = savedEmail;
+          } else if (isPhoneField(f.label) && savedPhone) {
+            initial[f.name] = savedPhone;
           } else {
             initial[f.name] = "";
           }
@@ -172,17 +176,19 @@ export function FieldsForm({
       return;
     }
 
-    // Save ФИО and email to DB for auto-fill next time
+    // Save ФИО, email, phone to DB for auto-fill next time
     let fullNameToSave: string | null = null;
     let emailToSave: string | null = null;
+    let phoneToSave: string | null = null;
     for (const f of allFields) {
       const val = values[f.name]?.trim() || "";
       if (isNameField(f.label) && val) fullNameToSave = val;
       if (isEmailField(f.label) && val) emailToSave = val;
+      if (isPhoneField(f.label) && val) phoneToSave = val;
     }
-    if (fullNameToSave || emailToSave) {
+    if (fullNameToSave || emailToSave || phoneToSave) {
       try {
-        await api.saveUserProfile(telegramId, fullNameToSave, emailToSave);
+        await api.saveUserProfile(telegramId, fullNameToSave, emailToSave, phoneToSave);
       } catch {
         // non-critical, ignore
       }
