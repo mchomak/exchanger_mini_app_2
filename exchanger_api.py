@@ -1049,9 +1049,9 @@ class ExchangerAPI:
         # 1. Расчёт
         calc = self.calculate(direction_id, amount, action)
         if calc.changed:
-            raise ValidationError(
-                f"Сумма {amount} вне допустимых лимитов направления {direction_id}. "
-                f"Допустимый диапазон: {calc.min_give}–{calc.max_give} {calc.currency_give}."
+            logger.warning(
+                f"Сумма {amount} скорректирована API. "
+                f"Лимиты: {calc.min_give}–{calc.max_give} {calc.currency_give}"
             )
 
         # 2. Валидация полей
