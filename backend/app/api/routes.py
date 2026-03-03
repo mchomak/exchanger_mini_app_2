@@ -45,8 +45,10 @@ def _error(message: str, status_code: int = 400) -> HTTPException:
 @router.post("/users/init", response_model=UserResponse)
 async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
     """Validate Telegram initData, find or create user, return user + settings."""
+    logger.debug(f"init_user called, initData length: {len(body.init_data)}")
     user_data = validate_init_data(body.init_data)
     if not user_data:
+        logger.warning(f"initData validation failed, initData length={len(body.init_data)}")
         raise _error("Invalid Telegram initData", 401)
 
     telegram_id = user_data.get("id")
@@ -83,7 +85,9 @@ async def init_user(body: InitUserRequest, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one()
 
     settings_resp = None
+    logger.debug(f"User {telegram_id} has settings: {user.settings is not None}")
     if user.settings:
+        logger.debug(f"Settings: full_name={user.settings.saved_full_name}, email={user.settings.saved_email}, phone={user.settings.saved_phone}")
         settings_resp = UserSettingsResponse(
             default_currency_give=user.settings.default_currency_give,
             default_currency_get=user.settings.default_currency_get,
@@ -233,10 +237,16 @@ async def get_fields(direction_id: str):
 
 @router.post("/users/profile/save")
 async def save_user_profile(body: SaveUserProfileRequest, db: AsyncSession = Depends(get_db)):
-    """Save user profile fields (full_name, email) for auto-fill."""
+    """Save user profile fields (full_name, email, phone) for auto-fill."""
+    logger.debug(f"save_user_profile: telegram_id={body.telegram_id}")
+    if not body.telegram_id or body.telegram_id <= 0:
+        logger.warning(f"Invalid telegram_id in profile save: {body.telegram_id}")
+        raise _error("Invalid Telegram ID", 400)
+
     result = await db.execute(select(User).where(User.telegram_id == body.telegram_id))
     user = result.scalar_one_or_none()
     if not user:
+        logger.warning(f"User not found for telegram_id={body.telegram_id}")
         raise _error("User not found", 404)
 
     if user.settings:

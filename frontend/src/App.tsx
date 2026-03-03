@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { TranslationProvider } from "./contexts/TranslationContext";
 import { useTelegram } from "./hooks/useTelegram";
 import { api } from "./api/client";
@@ -25,6 +25,7 @@ function AppContent() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initAttempted = useRef(false);
 
   const [view, setView] = useState<AppView>("calculator");
   const [confirmData, setConfirmData] = useState<ConfirmData | null>(null);
@@ -37,17 +38,49 @@ function AppContent() {
     webApp?.expand();
   }, [webApp]);
 
+  // Initialize user via API
+  const doInitUser = useCallback(async (data: string) => {
+    console.log("[App] doInitUser called, initData length:", data.length);
+    try {
+      const result = await api.initUser(data);
+      console.log("[App] initUser success, telegram_id:", result.telegram_id);
+      console.log("[App] settings:", JSON.stringify(result.settings));
+      setUserData(result);
+      setError(null);
+    } catch (err: any) {
+      console.error("[App] initUser failed:", err.message);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Try to init user when initData becomes available
   useEffect(() => {
     if (!initData) {
-      setLoading(false);
+      console.log("[App] No initData available yet, user from SDK:", user ? `id=${user.id}` : "null");
+      // Only stop loading if we've given the SDK time to initialize
+      // The useTelegram hook will retry after 150ms if SDK wasn't ready
+      const timer = setTimeout(() => {
+        if (!initData && !initAttempted.current) {
+          console.warn("[App] initData still empty after wait, proceeding without auth");
+          setLoading(false);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+
+    if (initAttempted.current && userData) {
+      // Already successfully initialized, don't re-init
       return;
     }
-    api
-      .initUser(initData)
-      .then(setUserData)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [initData]);
+
+    initAttempted.current = true;
+    doInitUser(initData);
+  }, [initData, doInitUser, userData, user]);
+
+  // Get telegramId from multiple sources (userData takes priority, then SDK user)
+  const telegramId = userData?.telegram_id || user?.id || 0;
 
   // Calculator → Confirmation
   const handleGoToConfirm = useCallback((data: ConfirmData) => {
@@ -75,12 +108,13 @@ function AppContent() {
     async (fields: Record<string, string>) => {
       if (!confirmData) return;
 
-      const telegramId = userData?.telegram_id || user?.id;
       if (!telegramId) {
-        setError("Telegram ID not found");
+        console.error("[App] telegramId is 0/null, cannot create order");
+        setError("Telegram ID not found. Please reopen the app from the bot.");
         return;
       }
 
+      console.log("[App] Creating order with telegramId:", telegramId);
       setExchangeFields(fields);
       setOrderLoading(true);
       setView("order"); // show loading state in order view
@@ -100,7 +134,7 @@ function AppContent() {
         setOrderLoading(false);
       }
     },
-    [confirmData, userData, user]
+    [confirmData, telegramId]
   );
 
   // Order Status → New Exchange
@@ -110,6 +144,21 @@ function AppContent() {
     setExchangeFields({});
     setView("calculator");
   }, []);
+
+  // Handle error OK — retry init if possible
+  const handleErrorOk = useCallback(() => {
+    setError(null);
+
+    // If we have initData but userData is not loaded, retry init
+    if (initData && !userData) {
+      console.log("[App] Retrying initUser after error...");
+      setLoading(true);
+      initAttempted.current = false;
+      doInitUser(initData);
+    } else {
+      setView("calculator");
+    }
+  }, [initData, userData, doInitUser]);
 
   if (loading) {
     return (
@@ -124,10 +173,7 @@ function AppContent() {
       <div className="flex items-center justify-center h-screen p-4 flex-col gap-4">
         <p className="text-red-500 text-center">{error}</p>
         <button
-          onClick={() => {
-            setError(null);
-            setView("calculator");
-          }}
+          onClick={handleErrorOk}
           className="px-6 py-2 rounded-xl bg-ex-accent text-ex-block-sm font-medium text-sm"
         >
           OK
@@ -152,7 +198,6 @@ function AppContent() {
   }
 
   if (view === "fields" && confirmData) {
-    const telegramId = userData?.telegram_id || user?.id || 0;
     return (
       <FieldsForm
         directionId={confirmData.directionId}

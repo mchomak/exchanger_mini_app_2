@@ -186,7 +186,7 @@ export function FieldsForm({
       if (isEmailField(f.label) && val) emailToSave = val;
       if (isPhoneField(f.label) && val) phoneToSave = val;
     }
-    if (fullNameToSave || emailToSave || phoneToSave) {
+    if ((fullNameToSave || emailToSave || phoneToSave) && telegramId > 0) {
       try {
         await api.saveUserProfile(telegramId, fullNameToSave, emailToSave, phoneToSave);
       } catch {
