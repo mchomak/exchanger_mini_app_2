@@ -36,6 +36,14 @@ function formatDate(iso: string | null): string {
   }
 }
 
+function formatAmount(value: string | null): string {
+  if (!value) return "—";
+  const num = parseFloat(value);
+  if (isNaN(num)) return value;
+  // Up to 4 decimal places, strip trailing zeros
+  return parseFloat(num.toFixed(4)).toString();
+}
+
 export function ExchangeHistory({ telegramId }: Props) {
   const { t } = useTranslation();
   const [items, setItems] = useState<ExchangeHistoryItem[]>([]);
@@ -111,7 +119,7 @@ export function ExchangeHistory({ telegramId }: Props) {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-ex-text-sec">
-                    {item.amount_give} → {item.amount_get}
+                    {formatAmount(item.amount_give)} → {formatAmount(item.amount_get)}
                   </span>
                   <span className={`text-xs font-medium ${success ? "text-ex-positive" : error ? "text-ex-error" : "text-ex-accent"}`}>
                     {item.status_title || item.status || "—"}
