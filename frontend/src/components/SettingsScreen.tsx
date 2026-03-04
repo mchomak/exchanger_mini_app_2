@@ -101,7 +101,7 @@ export function SettingsScreen({ telegramId, savedFullName, savedEmail, onProfil
     "px-4 py-2 rounded-xl bg-ex-block-sm text-ex-text-sec font-medium text-sm border border-ex-divider active:scale-[0.98] transition-transform";
 
   return (
-    <div className="px-4 py-6 max-w-md mx-auto pb-20">
+    <div className="px-4 py-6 max-w-md mx-auto pb-24">
       <h1 className="font-secondary text-xl font-bold text-center text-ex-accent mb-6 tracking-wide">
         SAPSANEX
       </h1>
@@ -193,7 +193,7 @@ export function SettingsScreen({ telegramId, savedFullName, savedEmail, onProfil
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setEditing(null)}>
           <div
-            className="bg-ex-block rounded-t-2xl w-full max-w-md p-5"
+            className="bg-ex-block rounded-t-2xl w-full max-w-md p-5 pb-8 mb-14"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-sm font-semibold text-ex-text mb-3">

@@ -75,6 +75,16 @@ function hasDropdown(label: string): boolean {
   return isPhoneField(label) || isCardField(label);
 }
 
+// Mask a value for display: show first/last chars, hide middle
+// e.g. "4279380625835188" → "4279****5188", "+79261234567" → "+792****4567"
+function maskValue(value: string): string {
+  const clean = value.replace(/\s/g, "");
+  if (clean.length <= 6) return clean;
+  const showStart = clean.startsWith("+") ? 4 : 4;
+  const showEnd = 4;
+  return clean.slice(0, showStart) + "****" + clean.slice(-showEnd);
+}
+
 export function FieldsForm({
   directionId,
   currencyGive,
@@ -253,7 +263,7 @@ export function FieldsForm({
   const getDropdownItems = (field: DirectionField): { label: string; value: string }[] => {
     if (isPhoneField(field.label)) {
       return savedPhones.map((p) => ({
-        label: p.label || p.phone_number,
+        label: p.label || maskValue(p.phone_number),
         value: p.phone_number.startsWith("+") ? p.phone_number : "+" + p.phone_number,
       }));
     }
@@ -262,12 +272,12 @@ export function FieldsForm({
       const displayLabel = getDisplayLabel(field.label);
       if (displayLabel === "На номер") {
         return savedPhones.map((p) => ({
-          label: p.label || p.phone_number,
+          label: p.label || maskValue(p.phone_number),
           value: p.phone_number.startsWith("+") ? p.phone_number : "+" + p.phone_number,
         }));
       }
       return savedCards.map((c) => ({
-        label: c.label || c.card_number,
+        label: c.label || maskValue(c.card_number),
         value: c.card_number,
       }));
     }
