@@ -6,8 +6,11 @@ import { ExchangeCalculator } from "./components/ExchangeCalculator";
 import { ConfirmationView } from "./components/ConfirmationView";
 import { FieldsForm } from "./components/FieldsForm";
 import { OrderStatus } from "./components/OrderStatus";
+import { ExchangeHistory } from "./components/ExchangeHistory";
+import { SettingsScreen } from "./components/SettingsScreen";
+import { Footer, Tab } from "./components/Footer";
 import { Loader } from "./components/Loader";
-import type { CalcResult, OrderData, UserData } from "./types";
+import type { CalcResult, OrderData, UserData, UserAccounts } from "./types";
 
 type AppView = "calculator" | "confirmation" | "fields" | "order";
 
@@ -27,11 +30,18 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const initAttempted = useRef(false);
 
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState<Tab>("home");
+
+  // Exchange flow state
   const [view, setView] = useState<AppView>("calculator");
   const [confirmData, setConfirmData] = useState<ConfirmData | null>(null);
   const [exchangeFields, setExchangeFields] = useState<Record<string, string>>({});
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+
+  // Saved accounts for FieldsForm dropdowns
+  const [accounts, setAccounts] = useState<UserAccounts>({ cards: [], wallets: [], phones: [] });
 
   useEffect(() => {
     webApp?.ready();
@@ -44,7 +54,6 @@ function AppContent() {
     try {
       const result = await api.initUser(data);
       console.log("[App] initUser success, telegram_id:", result.telegram_id);
-      console.log("[App] settings:", JSON.stringify(result.settings));
       setUserData(result);
       setError(null);
     } catch (err: any) {
@@ -58,9 +67,6 @@ function AppContent() {
   // Try to init user when initData becomes available
   useEffect(() => {
     if (!initData) {
-      console.log("[App] No initData available yet, user from SDK:", user ? `id=${user.id}` : "null");
-      // Only stop loading if we've given the SDK time to initialize
-      // The useTelegram hook will retry after 150ms if SDK wasn't ready
       const timer = setTimeout(() => {
         if (!initData && !initAttempted.current) {
           console.warn("[App] initData still empty after wait, proceeding without auth");
@@ -70,17 +76,38 @@ function AppContent() {
       return () => clearTimeout(timer);
     }
 
-    if (initAttempted.current && userData) {
-      // Already successfully initialized, don't re-init
-      return;
-    }
+    if (initAttempted.current && userData) return;
 
     initAttempted.current = true;
     doInitUser(initData);
   }, [initData, doInitUser, userData, user]);
 
-  // Get telegramId from multiple sources (userData takes priority, then SDK user)
+  // Get telegramId
   const telegramId = userData?.telegram_id || user?.id || 0;
+
+  // Load saved accounts when user is available
+  const loadAccounts = useCallback(() => {
+    if (!telegramId) return;
+    api.getUserAccounts(telegramId).then(setAccounts).catch(() => {});
+  }, [telegramId]);
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
+
+  // Tab change handler — reset exchange flow when going to home
+  const handleTabChange = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    if (tab === "home") {
+      // Reset to calculator if not in active exchange flow
+      if (view !== "order" || !orderData) {
+        setView("calculator");
+        setConfirmData(null);
+        setOrderData(null);
+        setExchangeFields({});
+      }
+    }
+  }, [view, orderData]);
 
   // Calculator → Confirmation
   const handleGoToConfirm = useCallback((data: ConfirmData) => {
@@ -88,17 +115,14 @@ function AppContent() {
     setView("confirmation");
   }, []);
 
-  // Confirmation → Back to Calculator
   const handleBackToCalc = useCallback(() => {
     setView("calculator");
   }, []);
 
-  // Confirmation → Fields Form
   const handleGoToFields = useCallback(() => {
     setView("fields");
   }, []);
 
-  // Fields Form → Back to Confirmation
   const handleBackToConfirm = useCallback(() => {
     setView("confirmation");
   }, []);
@@ -109,15 +133,13 @@ function AppContent() {
       if (!confirmData) return;
 
       if (!telegramId) {
-        console.error("[App] telegramId is 0/null, cannot create order");
         setError("Telegram ID not found. Please reopen the app from the bot.");
         return;
       }
 
-      console.log("[App] Creating order with telegramId:", telegramId);
       setExchangeFields(fields);
       setOrderLoading(true);
-      setView("order"); // show loading state in order view
+      setView("order");
 
       try {
         const result = await api.createOrder(
@@ -129,7 +151,7 @@ function AppContent() {
         setOrderData(result);
       } catch (err: any) {
         setError(err.message || "Order creation failed");
-        setView("fields"); // go back to fields on error
+        setView("fields");
       } finally {
         setOrderLoading(false);
       }
@@ -137,7 +159,6 @@ function AppContent() {
     [confirmData, telegramId]
   );
 
-  // Order Status → New Exchange
   const handleNewExchange = useCallback(() => {
     setOrderData(null);
     setConfirmData(null);
@@ -145,13 +166,10 @@ function AppContent() {
     setView("calculator");
   }, []);
 
-  // Handle error OK — retry init if possible
+  // Handle error OK
   const handleErrorOk = useCallback(() => {
     setError(null);
-
-    // If we have initData but userData is not loaded, retry init
     if (initData && !userData) {
-      console.log("[App] Retrying initUser after error...");
       setLoading(true);
       initAttempted.current = false;
       doInitUser(initData);
@@ -159,6 +177,13 @@ function AppContent() {
       setView("calculator");
     }
   }, [initData, userData, doInitUser]);
+
+  // Refresh userData after profile save in Settings
+  const handleProfileSaved = useCallback(() => {
+    if (initData) {
+      api.initUser(initData).then(setUserData).catch(() => {});
+    }
+  }, [initData]);
 
   if (loading) {
     return (
@@ -182,54 +207,84 @@ function AppContent() {
     );
   }
 
-  if (view === "confirmation" && confirmData) {
-    return (
-      <ConfirmationView
-        calcResult={confirmData.calcResult}
-        amountGive={confirmData.amountGive}
-        amountGet={confirmData.amountGet}
-        currencyGive={confirmData.currencyGive}
-        currencyGet={confirmData.currencyGet}
-        onConfirm={handleGoToFields}
-        onBack={handleBackToCalc}
-        loading={false}
-      />
-    );
-  }
+  // Exchange flow views (no footer during active exchange flow except calculator)
+  const inExchangeFlow = view !== "calculator" && activeTab === "home";
 
-  if (view === "fields" && confirmData) {
-    return (
-      <FieldsForm
-        directionId={confirmData.directionId}
-        currencyGive={confirmData.currencyGive}
-        currencyGet={confirmData.currencyGet}
-        telegramUsername={user?.username ?? null}
-        savedFullName={userData?.settings?.saved_full_name ?? null}
-        savedEmail={userData?.settings?.saved_email ?? null}
-        savedPhone={userData?.settings?.saved_phone ?? null}
-        telegramId={telegramId}
-        onSubmit={handleFieldsSubmit}
-        onBack={handleBackToConfirm}
-      />
-    );
-  }
-
-  if (view === "order") {
-    if (orderLoading || !orderData) {
+  if (inExchangeFlow) {
+    if (view === "confirmation" && confirmData) {
       return (
-        <div className="flex items-center justify-center h-screen">
-          <Loader />
-        </div>
+        <ConfirmationView
+          calcResult={confirmData.calcResult}
+          amountGive={confirmData.amountGive}
+          amountGet={confirmData.amountGet}
+          currencyGive={confirmData.currencyGive}
+          currencyGet={confirmData.currencyGet}
+          onConfirm={handleGoToFields}
+          onBack={handleBackToCalc}
+          loading={false}
+        />
       );
     }
-    return <OrderStatus order={orderData} onNewExchange={handleNewExchange} />;
+
+    if (view === "fields" && confirmData) {
+      return (
+        <FieldsForm
+          directionId={confirmData.directionId}
+          currencyGive={confirmData.currencyGive}
+          currencyGet={confirmData.currencyGet}
+          telegramUsername={user?.username ?? null}
+          savedFullName={userData?.settings?.saved_full_name ?? null}
+          savedEmail={userData?.settings?.saved_email ?? null}
+          savedPhone={userData?.settings?.saved_phone ?? null}
+          savedCards={accounts.cards}
+          savedPhones={accounts.phones}
+          telegramId={telegramId}
+          onSubmit={handleFieldsSubmit}
+          onBack={handleBackToConfirm}
+        />
+      );
+    }
+
+    if (view === "order") {
+      if (orderLoading || !orderData) {
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <Loader />
+          </div>
+        );
+      }
+      return <OrderStatus order={orderData} onNewExchange={handleNewExchange} />;
+    }
   }
 
+  // Tab-based views with footer
   return (
-    <ExchangeCalculator
-      userSettings={userData?.settings ?? null}
-      onGoToConfirm={handleGoToConfirm}
-    />
+    <>
+      {activeTab === "home" && (
+        <div className="pb-16">
+          <ExchangeCalculator
+            userSettings={userData?.settings ?? null}
+            onGoToConfirm={handleGoToConfirm}
+          />
+        </div>
+      )}
+      {activeTab === "history" && (
+        <div className="pb-16">
+          <ExchangeHistory telegramId={telegramId} />
+        </div>
+      )}
+      {activeTab === "settings" && (
+        <div className="pb-16">
+          <SettingsScreen
+            telegramId={telegramId}
+            savedFullName={userData?.settings?.saved_full_name ?? null}
+            savedEmail={userData?.settings?.saved_email ?? null}
+            onProfileSaved={handleProfileSaved}
+          />
+        </div>
+      )}
+      <Footer activeTab={activeTab} onTabChange={handleTabChange} />
+    </>
   );
 }
 

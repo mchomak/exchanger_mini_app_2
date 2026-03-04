@@ -23,6 +23,8 @@ class Exchange(Base):
     amount_give: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
     amount_get: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
     status: Mapped[str | None] = mapped_column(String(50))
+    status_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     payment_type: Mapped[str | None] = mapped_column(String(20))
     can_cancel: Mapped[bool] = mapped_column(Boolean, default=False)
     can_pay_via_api: Mapped[bool] = mapped_column(Boolean, default=False)
