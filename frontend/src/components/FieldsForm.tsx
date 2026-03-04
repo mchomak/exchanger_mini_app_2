@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../api/client";
 import { Loader } from "./Loader";
-import type { DirectionField } from "../types";
+import type { DirectionField, UserCardItem, UserPhoneItem } from "../types";
 
 interface Props {
   directionId: string;
@@ -12,6 +12,8 @@ interface Props {
   savedFullName: string | null;
   savedEmail: string | null;
   savedPhone: string | null;
+  savedCards: UserCardItem[];
+  savedPhones: UserPhoneItem[];
   telegramId: number;
   onSubmit: (fields: Record<string, string>) => void;
   onBack: () => void;
@@ -43,6 +45,13 @@ function isCardField(label: string): boolean {
   return l.includes("карт") || l.includes("card") || l.includes("счёт") || l.includes("счет");
 }
 
+// "На карту" → "На номер" rename
+function getDisplayLabel(label: string): string {
+  const l = label.toLowerCase();
+  if (l === "на карту" || l === "to card") return "На номер";
+  return label;
+}
+
 function mapInputType(field: DirectionField): string {
   const l = field.label.toLowerCase();
   if (isEmailField(l)) return "email";
@@ -52,13 +61,18 @@ function mapInputType(field: DirectionField): string {
 
 // Validation
 function validatePhone(value: string): boolean {
-  if (!value.trim()) return true; // empty is handled by required check
+  if (!value.trim()) return true;
   return /^[+]?[\d\s()-]{7,20}$/.test(value.trim());
 }
 
 function validateEmail(value: string): boolean {
   if (!value.trim()) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+// Check if a field should show saved items dropdown (phone or card)
+function hasDropdown(label: string): boolean {
+  return isPhoneField(label) || isCardField(label);
 }
 
 export function FieldsForm({
@@ -69,6 +83,8 @@ export function FieldsForm({
   savedFullName,
   savedEmail,
   savedPhone,
+  savedCards,
+  savedPhones,
   telegramId,
   onSubmit,
   onBack,
@@ -80,6 +96,7 @@ export function FieldsForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [autoSkipped, setAutoSkipped] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   // Load direction fields
   useEffect(() => {
@@ -90,7 +107,7 @@ export function FieldsForm({
         const fields = [...data.required_fields, ...data.optional_fields];
         setAllFields(fields);
 
-        // Initialize values with auto-fill
+        // Initialize values with auto-fill (only ФИО and email)
         const initial: Record<string, string> = {};
         for (const f of fields) {
           if (isTelegramField(f.label)) {
@@ -99,25 +116,13 @@ export function FieldsForm({
             initial[f.name] = savedFullName;
           } else if (isEmailField(f.label) && savedEmail) {
             initial[f.name] = savedEmail;
-          } else if (isPhoneField(f.label) && savedPhone) {
-            // Ensure saved phone has +7 prefix
-            const digits = savedPhone.replace(/[^\d+]/g, "");
-            if (digits.startsWith("+")) {
-              initial[f.name] = digits;
-            } else if (digits.startsWith("8") && digits.length === 11) {
-              initial[f.name] = "+7" + digits.slice(1);
-            } else if (digits.startsWith("7") && digits.length === 11) {
-              initial[f.name] = "+" + digits;
-            } else {
-              initial[f.name] = "+7" + digits;
-            }
           } else {
             initial[f.name] = "";
           }
         }
         setValues(initial);
 
-        // If no visible fields (all telegram-auto-filled or empty), auto-skip
+        // If no visible fields, auto-skip
         const visibleFields = fields.filter((f) => !isTelegramField(f.label));
         if (visibleFields.length === 0) {
           setAutoSkipped(true);
@@ -152,17 +157,13 @@ export function FieldsForm({
 
     // Auto-prepend +7 for phone fields
     if (field && isPhoneField(field.label)) {
-      // Strip all non-digit characters except +
       const digits = value.replace(/[^\d+]/g, "");
-
       if (digits === "" || digits === "+") {
         newValue = "";
       } else if (!digits.startsWith("+")) {
-        // User typed digits without +7 prefix — add it
         if (digits.startsWith("7") && digits.length > 1) {
           newValue = "+" + digits;
         } else if (digits.startsWith("8") && digits.length > 1) {
-          // Replace leading 8 with +7
           newValue = "+7" + digits.slice(1);
         } else {
           newValue = "+7" + digits;
@@ -182,22 +183,28 @@ export function FieldsForm({
     }
   };
 
+  const handleSelectSaved = (fieldName: string, value: string) => {
+    setValues((prev) => ({ ...prev, [fieldName]: value }));
+    setOpenDropdown(null);
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldName];
+        return next;
+      });
+    }
+  };
+
   const handleSubmit = async () => {
-    // Validate
     const errors: Record<string, string> = {};
 
     for (const f of visibleFields) {
       const val = values[f.name]?.trim() || "";
-
-      // Required check
       if (f.req && !val) {
         errors[f.name] = t("field_required");
         continue;
       }
-
-      if (!val) continue; // optional and empty — skip validation
-
-      // Format validation
+      if (!val) continue;
       if (isPhoneField(f.label) && !validatePhone(val)) {
         errors[f.name] = t("invalid_phone");
       } else if (isEmailField(f.label) && !validateEmail(val)) {
@@ -224,11 +231,11 @@ export function FieldsForm({
       try {
         await api.saveUserProfile(telegramId, fullNameToSave, emailToSave, phoneToSave);
       } catch {
-        // non-critical, ignore
+        // non-critical
       }
     }
 
-    // Build final fields dict (include telegram auto-filled)
+    // Build final fields dict
     // For phone fields: strip "+" before sending — API expects digits only
     const phoneFieldNames = new Set(
       allFields.filter((f) => isPhoneField(f.label)).map((f) => f.name)
@@ -240,6 +247,89 @@ export function FieldsForm({
       result[key] = phoneFieldNames.has(key) ? trimmed.replace(/^\+/, "") : trimmed;
     }
     onSubmit(result);
+  };
+
+  // Get dropdown items for a field
+  const getDropdownItems = (field: DirectionField): { label: string; value: string }[] => {
+    if (isPhoneField(field.label)) {
+      return savedPhones.map((p) => ({
+        label: p.label || p.phone_number,
+        value: p.phone_number.startsWith("+") ? p.phone_number : "+" + p.phone_number,
+      }));
+    }
+    if (isCardField(field.label)) {
+      // For "На карту" (renamed to "На номер") — show phones
+      const displayLabel = getDisplayLabel(field.label);
+      if (displayLabel === "На номер") {
+        return savedPhones.map((p) => ({
+          label: p.label || p.phone_number,
+          value: p.phone_number.startsWith("+") ? p.phone_number : "+" + p.phone_number,
+        }));
+      }
+      return savedCards.map((c) => ({
+        label: c.label || c.card_number,
+        value: c.card_number,
+      }));
+    }
+    return [];
+  };
+
+  const renderFieldInput = (field: DirectionField, isRequired: boolean) => {
+    const displayLabel = getDisplayLabel(field.label);
+    const showDropdown = hasDropdown(field.label);
+    const dropdownItems = showDropdown ? getDropdownItems(field) : [];
+    const isDropdownOpen = openDropdown === field.name;
+    // For renamed "На карту" → "На номер", treat as phone field for input type
+    const isRenamed = displayLabel === "На номер";
+    const inputType = isRenamed ? "tel" : mapInputType(field);
+    const placeholder = isPhoneField(field.label) || isRenamed ? "+7" : displayLabel;
+
+    return (
+      <div key={field.name} className="mb-3">
+        <label className="block text-xs font-medium text-ex-text-sec mb-1.5 uppercase tracking-wider">
+          {displayLabel} {isRequired && <span className="text-ex-accent">*</span>}
+        </label>
+        <div className="relative">
+          <input
+            type={inputType}
+            value={values[field.name] || ""}
+            onChange={(e) => handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field)}
+            className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
+                       text-sm border font-primary transition-colors
+                       ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
+            placeholder={placeholder}
+          />
+          {showDropdown && dropdownItems.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(isDropdownOpen ? null : field.name)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-ex-accent text-xs font-medium px-2 py-1 rounded-lg bg-ex-block-sm border border-ex-divider"
+            >
+              {t("field_select_saved")}
+            </button>
+          )}
+        </div>
+        {isDropdownOpen && dropdownItems.length > 0 && (
+          <div className="mt-1 bg-ex-block-sm rounded-xl border border-ex-divider overflow-hidden shadow-lg">
+            {dropdownItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSelectSaved(field.name, item.value)}
+                className="w-full text-left px-4 py-2.5 text-sm text-ex-text hover:bg-ex-hover active:bg-ex-selected border-b border-ex-divider last:border-b-0 transition-colors"
+              >
+                <span className="block text-ex-text">{item.value}</span>
+                {item.label !== item.value && (
+                  <span className="block text-[10px] text-ex-text-sec">{item.label}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+        {fieldErrors[field.name] && (
+          <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -285,25 +375,7 @@ export function FieldsForm({
         </p>
 
         {/* Required fields */}
-        {requiredVisible.map((field) => (
-          <div key={field.name} className="mb-3">
-            <label className="block text-xs font-medium text-ex-text-sec mb-1.5 uppercase tracking-wider">
-              {field.label} <span className="text-ex-accent">*</span>
-            </label>
-            <input
-              type={mapInputType(field)}
-              value={values[field.name] || ""}
-              onChange={(e) => handleChange(field.name, e.target.value, field)}
-              className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
-                         text-sm border font-primary transition-colors
-                         ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
-              placeholder={isPhoneField(field.label) ? "+7" : field.label}
-            />
-            {fieldErrors[field.name] && (
-              <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
-            )}
-          </div>
-        ))}
+        {requiredVisible.map((field) => renderFieldInput(field, true))}
 
         {/* Optional fields */}
         {optionalVisible.length > 0 && (
@@ -312,29 +384,11 @@ export function FieldsForm({
               <div className="border-t border-ex-divider my-4" />
             )}
             <p className="text-xs text-ex-text-sec mb-3">{t("optional_fields")}</p>
-            {optionalVisible.map((field) => (
-              <div key={field.name} className="mb-3">
-                <label className="block text-xs font-medium text-ex-text-sec mb-1.5 uppercase tracking-wider">
-                  {field.label}
-                </label>
-                <input
-                  type={mapInputType(field)}
-                  value={values[field.name] || ""}
-                  onChange={(e) => handleChange(field.name, e.target.value, field)}
-                  className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
-                             text-sm border font-primary transition-colors
-                             ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
-                  placeholder={isPhoneField(field.label) ? "+7" : field.label}
-                />
-                {fieldErrors[field.name] && (
-                  <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
-                )}
-              </div>
-            ))}
+            {optionalVisible.map((field) => renderFieldInput(field, false))}
           </>
         )}
 
-        {/* Submit button — active only when all required fields filled */}
+        {/* Submit button */}
         <button
           onClick={handleSubmit}
           disabled={!allRequiredFilled}

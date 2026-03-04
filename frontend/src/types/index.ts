@@ -72,3 +72,39 @@ export interface OrderData {
 }
 
 export type Translations = Record<string, string>;
+
+export interface ExchangeHistoryItem {
+  id: number;
+  currency_give: string | null;
+  currency_get: string | null;
+  amount_give: string | null;
+  amount_get: string | null;
+  status: string | null;
+  status_title: string | null;
+  error_message: string | null;
+  created_at: string | null;
+}
+
+export interface UserCardItem {
+  id: number;
+  label: string | null;
+  card_number: string;
+}
+
+export interface UserWalletItem {
+  id: number;
+  label: string | null;
+  address: string;
+}
+
+export interface UserPhoneItem {
+  id: number;
+  label: string | null;
+  phone_number: string;
+}
+
+export interface UserAccounts {
+  cards: UserCardItem[];
+  wallets: UserWalletItem[];
+  phones: UserPhoneItem[];
+}

@@ -69,3 +69,67 @@ class SaveUserProfileRequest(BaseModel):
 class ErrorResponse(BaseModel):
     error: bool = True
     message: str
+
+
+# ── Exchange History ─────────────────────────────────────────────────────────
+
+class ExchangeHistoryItem(BaseModel):
+    id: int
+    currency_give: Optional[str] = None
+    currency_get: Optional[str] = None
+    amount_give: Optional[str] = None
+    amount_get: Optional[str] = None
+    status: Optional[str] = None
+    status_title: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+# ── User Accounts CRUD ───────────────────────────────────────────────────────
+
+class UserCardItem(BaseModel):
+    id: int
+    label: Optional[str] = None
+    card_number: str
+
+class UserCardCreate(BaseModel):
+    label: Optional[str] = None
+    card_number: str = Field(..., min_length=8, max_length=30)
+
+class UserCardUpdate(BaseModel):
+    label: Optional[str] = None
+    card_number: Optional[str] = Field(None, min_length=8, max_length=30)
+
+
+class UserWalletItem(BaseModel):
+    id: int
+    label: Optional[str] = None
+    address: str
+
+class UserWalletCreate(BaseModel):
+    label: Optional[str] = None
+    address: str = Field(..., min_length=10, max_length=255)
+
+class UserWalletUpdate(BaseModel):
+    label: Optional[str] = None
+    address: Optional[str] = Field(None, min_length=10, max_length=255)
+
+
+class UserPhoneItem(BaseModel):
+    id: int
+    label: Optional[str] = None
+    phone_number: str
+
+class UserPhoneCreate(BaseModel):
+    label: Optional[str] = None
+    phone_number: str = Field(..., min_length=7, max_length=30)
+
+class UserPhoneUpdate(BaseModel):
+    label: Optional[str] = None
+    phone_number: Optional[str] = Field(None, min_length=7, max_length=30)
+
+
+class UserAccountsResponse(BaseModel):
+    cards: list[UserCardItem] = []
+    wallets: list[UserWalletItem] = []
+    phones: list[UserPhoneItem] = []

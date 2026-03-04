@@ -12,14 +12,28 @@ from backend.app.api.schemas import (
     CalculateRequest,
     CalculateResponse,
     CreateExchangeRequest,
+    ExchangeHistoryItem,
     InitUserRequest,
     SaveUserProfileRequest,
+    UserAccountsResponse,
+    UserCardCreate,
+    UserCardItem,
+    UserCardUpdate,
+    UserPhoneCreate,
+    UserPhoneItem,
+    UserPhoneUpdate,
     UserResponse,
     UserSettingsResponse,
+    UserWalletCreate,
+    UserWalletItem,
+    UserWalletUpdate,
 )
 from backend.app.core.database import get_db
 from backend.app.models.exchange import Exchange
 from backend.app.models.user import User
+from backend.app.models.user_card import UserCard
+from backend.app.models.user_crypto_wallet import UserCryptoWallet
+from backend.app.models.user_phone import UserPhone
 from backend.app.models.user_settings import UserSettings
 from backend.app.services.bot_notify import send_order_created, send_order_error, send_order_paid
 from backend.app.services.exchanger import (
@@ -160,6 +174,7 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
             amount_give=float(bid_data.get("amount_give", 0)),
             amount_get=float(bid_data.get("amount_get", 0)),
             status=bid_data.get("status_title"),
+            status_title=bid_data.get("status_title"),
             payment_type=bid_data.get("payment_type"),
             can_cancel=bid_data.get("can_cancel", False),
             can_pay_via_api=bid_data.get("can_pay_via_api", False),
@@ -200,7 +215,12 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
             old_status = exchange.status
             new_status = status_data.get("status_title", "")
             exchange.status = new_status
+            exchange.status_title = new_status
             exchange.updated_at = datetime.utcnow()
+            # Save error message if status indicates error
+            new_lower = new_status.lower()
+            if any(kw in new_lower for kw in ("ошибк", "отмен", "error", "cancel", "reject")):
+                exchange.error_message = new_status
             await db.commit()
             logger.info(f"Exchange {hash} status updated: {old_status} -> {new_status}")
 
@@ -208,7 +228,6 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
             if exchange.user:
                 telegram_id = exchange.user.telegram_id
                 try:
-                    new_lower = new_status.lower()
                     if any(kw in new_lower for kw in ("оплач", "выполн", "paid", "done", "complet")):
                         await send_order_paid(telegram_id, status_data)
                     elif any(kw in new_lower for kw in ("ошибк", "отмен", "error", "cancel", "reject")):
@@ -258,6 +277,172 @@ async def save_user_profile(body: SaveUserProfileRequest, db: AsyncSession = Dep
             user.settings.saved_phone = body.phone
         await db.commit()
 
+    return {"ok": True}
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _get_user_by_tg(telegram_id: int, db: AsyncSession) -> User:
+    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise _error("User not found", 404)
+    return user
+
+
+# ── Exchange History ─────────────────────────────────────────────────────────
+
+@router.get("/exchange/history/{telegram_id}")
+async def get_exchange_history(telegram_id: int, db: AsyncSession = Depends(get_db)):
+    """Get user exchange history ordered by date descending."""
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(
+        select(Exchange)
+        .where(Exchange.user_id == user.id)
+        .order_by(Exchange.created_at.desc())
+        .limit(100)
+    )
+    exchanges = result.scalars().all()
+    items = []
+    for ex in exchanges:
+        items.append(ExchangeHistoryItem(
+            id=ex.id,
+            currency_give=ex.currency_give_code,
+            currency_get=ex.currency_get_code,
+            amount_give=str(ex.amount_give) if ex.amount_give else None,
+            amount_get=str(ex.amount_get) if ex.amount_get else None,
+            status=ex.status,
+            status_title=ex.status_title,
+            error_message=ex.error_message,
+            created_at=ex.created_at.isoformat() if ex.created_at else None,
+        ))
+    return items
+
+
+# ── User Accounts CRUD ──────────────────────────────────────────────────────
+
+@router.get("/users/{telegram_id}/accounts")
+async def get_user_accounts(telegram_id: int, db: AsyncSession = Depends(get_db)):
+    """Get all saved accounts (cards, wallets, phones) for a user."""
+    user = await _get_user_by_tg(telegram_id, db)
+    return UserAccountsResponse(
+        cards=[UserCardItem(id=c.id, label=c.label, card_number=c.card_number) for c in user.cards],
+        wallets=[UserWalletItem(id=w.id, label=w.label, address=w.address) for w in user.crypto_wallets],
+        phones=[UserPhoneItem(id=p.id, label=p.label, phone_number=p.phone_number) for p in user.phones],
+    )
+
+
+# Cards
+@router.post("/users/{telegram_id}/cards")
+async def add_card(telegram_id: int, body: UserCardCreate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    card = UserCard(user_id=user.id, label=body.label, card_number=body.card_number)
+    db.add(card)
+    await db.commit()
+    await db.refresh(card)
+    return UserCardItem(id=card.id, label=card.label, card_number=card.card_number)
+
+
+@router.put("/users/{telegram_id}/cards/{card_id}")
+async def update_card(telegram_id: int, card_id: int, body: UserCardUpdate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserCard).where(UserCard.id == card_id, UserCard.user_id == user.id))
+    card = result.scalar_one_or_none()
+    if not card:
+        raise _error("Card not found", 404)
+    if body.label is not None:
+        card.label = body.label
+    if body.card_number is not None:
+        card.card_number = body.card_number
+    await db.commit()
+    return UserCardItem(id=card.id, label=card.label, card_number=card.card_number)
+
+
+@router.delete("/users/{telegram_id}/cards/{card_id}")
+async def delete_card(telegram_id: int, card_id: int, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserCard).where(UserCard.id == card_id, UserCard.user_id == user.id))
+    card = result.scalar_one_or_none()
+    if not card:
+        raise _error("Card not found", 404)
+    await db.delete(card)
+    await db.commit()
+    return {"ok": True}
+
+
+# Wallets
+@router.post("/users/{telegram_id}/wallets")
+async def add_wallet(telegram_id: int, body: UserWalletCreate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    wallet = UserCryptoWallet(user_id=user.id, label=body.label, address=body.address)
+    db.add(wallet)
+    await db.commit()
+    await db.refresh(wallet)
+    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address)
+
+
+@router.put("/users/{telegram_id}/wallets/{wallet_id}")
+async def update_wallet(telegram_id: int, wallet_id: int, body: UserWalletUpdate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserCryptoWallet).where(UserCryptoWallet.id == wallet_id, UserCryptoWallet.user_id == user.id))
+    wallet = result.scalar_one_or_none()
+    if not wallet:
+        raise _error("Wallet not found", 404)
+    if body.label is not None:
+        wallet.label = body.label
+    if body.address is not None:
+        wallet.address = body.address
+    await db.commit()
+    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address)
+
+
+@router.delete("/users/{telegram_id}/wallets/{wallet_id}")
+async def delete_wallet(telegram_id: int, wallet_id: int, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserCryptoWallet).where(UserCryptoWallet.id == wallet_id, UserCryptoWallet.user_id == user.id))
+    wallet = result.scalar_one_or_none()
+    if not wallet:
+        raise _error("Wallet not found", 404)
+    await db.delete(wallet)
+    await db.commit()
+    return {"ok": True}
+
+
+# Phones
+@router.post("/users/{telegram_id}/phones")
+async def add_phone(telegram_id: int, body: UserPhoneCreate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    phone = UserPhone(user_id=user.id, label=body.label, phone_number=body.phone_number)
+    db.add(phone)
+    await db.commit()
+    await db.refresh(phone)
+    return UserPhoneItem(id=phone.id, label=phone.label, phone_number=phone.phone_number)
+
+
+@router.put("/users/{telegram_id}/phones/{phone_id}")
+async def update_phone(telegram_id: int, phone_id: int, body: UserPhoneUpdate, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserPhone).where(UserPhone.id == phone_id, UserPhone.user_id == user.id))
+    phone = result.scalar_one_or_none()
+    if not phone:
+        raise _error("Phone not found", 404)
+    if body.label is not None:
+        phone.label = body.label
+    if body.phone_number is not None:
+        phone.phone_number = body.phone_number
+    await db.commit()
+    return UserPhoneItem(id=phone.id, label=phone.label, phone_number=phone.phone_number)
+
+
+@router.delete("/users/{telegram_id}/phones/{phone_id}")
+async def delete_phone(telegram_id: int, phone_id: int, db: AsyncSession = Depends(get_db)):
+    user = await _get_user_by_tg(telegram_id, db)
+    result = await db.execute(select(UserPhone).where(UserPhone.id == phone_id, UserPhone.user_id == user.id))
+    phone = result.scalar_one_or_none()
+    if not phone:
+        raise _error("Phone not found", 404)
+    await db.delete(phone)
+    await db.commit()
     return {"ok": True}
 
 

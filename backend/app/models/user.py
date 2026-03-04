@@ -22,5 +22,8 @@ class User(Base):
 
     settings: Mapped["UserSettings"] = relationship(back_populates="user", uselist=False, lazy="selectin")
     exchanges: Mapped[list["Exchange"]] = relationship(back_populates="user", lazy="selectin")
+    cards: Mapped[list["UserCard"]] = relationship(back_populates="user", lazy="selectin")
+    crypto_wallets: Mapped[list["UserCryptoWallet"]] = relationship(back_populates="user", lazy="selectin")
+    phones: Mapped[list["UserPhone"]] = relationship(back_populates="user", lazy="selectin")
 
     __table_args__ = (Index("ix_users_telegram_id", "telegram_id"),)
