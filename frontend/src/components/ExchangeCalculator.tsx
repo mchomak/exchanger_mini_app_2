@@ -236,10 +236,14 @@ export function ExchangeCalculator({ userSettings, onGoToConfirm }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col justify-center px-4 py-6 max-w-md mx-auto">
-      {/* Logo / Title */}
-      <h1 className="font-secondary text-xl font-bold text-center text-ex-accent mb-8 tracking-wide">
-        SAPSANEX
-      </h1>
+      {/* Logo */}
+      <div className="flex justify-center mb-8">
+        <img
+          src="/images/logo.png"
+          alt="SapsanEx"
+          className="h-10 w-auto"
+        />
+      </div>
 
       {/* Card */}
       <div className="bg-ex-block rounded-2xl p-5 shadow-lg">
