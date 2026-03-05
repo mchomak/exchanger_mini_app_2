@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     debug: bool = True
     cors_origins: str = '["http://localhost:5173","http://localhost:3000"]'
 
+    # Review campaign
+    review_info_url: str = "https://t.me/sapsanpay"
+    review_button_url: str = "https://t.me/sapsanpay"
+
     @property
     def cors_origins_list(self) -> List[str]:
         return json.loads(self.cors_origins)
