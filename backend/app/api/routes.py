@@ -35,7 +35,7 @@ from backend.app.models.user_card import UserCard
 from backend.app.models.user_crypto_wallet import UserCryptoWallet
 from backend.app.models.user_phone import UserPhone
 from backend.app.models.user_settings import UserSettings
-from backend.app.services.bot_notify import send_order_created, send_order_error, send_order_paid
+from backend.app.services.bot_notify import send_order_created, send_order_error, send_order_paid, send_review_banner
 from backend.app.services.exchanger import (
     calculate_exchange,
     create_exchange,
@@ -230,6 +230,7 @@ async def get_exchange_status(hash: str, db: AsyncSession = Depends(get_db)):
                 try:
                     if any(kw in new_lower for kw in ("оплач", "выполн", "paid", "done", "complet")):
                         await send_order_paid(telegram_id, status_data)
+                        await send_review_banner(telegram_id)
                     elif any(kw in new_lower for kw in ("ошибк", "отмен", "error", "cancel", "reject")):
                         await send_order_error(telegram_id, status_data)
                 except Exception as notify_err:

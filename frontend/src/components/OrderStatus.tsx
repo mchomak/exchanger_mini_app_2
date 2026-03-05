@@ -9,6 +9,8 @@ interface Props {
 }
 
 const PAYMENT_TIMEOUT_SECONDS = 30 * 60; // 30 minutes
+const REVIEW_INFO_URL = import.meta.env.VITE_REVIEW_INFO_URL || "https://t.me/sapsanpay";
+const REVIEW_BUTTON_URL = import.meta.env.VITE_REVIEW_BUTTON_URL || REVIEW_INFO_URL;
 
 export function OrderStatus({ order: initialOrder, onNewExchange }: Props) {
   const { t } = useTranslation();
@@ -83,6 +85,10 @@ export function OrderStatus({ order: initialOrder, onNewExchange }: Props) {
 
   const handleDetails = useCallback(() => {
     window.open("https://t.me/sapsanpay", "_blank");
+  }, []);
+
+  const handleOpenReview = useCallback((url: string) => {
+    window.open(url, "_blank");
   }, []);
 
   const formatTime = (secs: number) => {
@@ -186,6 +192,29 @@ export function OrderStatus({ order: initialOrder, onNewExchange }: Props) {
         {isWaiting && timerExpired && (
           <div className="text-center mb-5">
             <p className="text-sm text-ex-error font-medium">{t("timer_expired")}</p>
+          </div>
+        )}
+
+        {isPaidOrDone && (
+          <div className="mb-5 rounded-3xl border-2 border-ex-accent/90 bg-[#0E5B57] px-5 py-6 text-center">
+            <h3 className="mb-3 text-3xl font-semibold text-ex-accent font-secondary">Получите 50$ за отзыв!</h3>
+            <p className="mb-3 text-sm leading-relaxed text-white">
+              Оставьте честный отзыв о SapsanEx — и примите участие в розыгрыше <span className="font-semibold text-ex-accent">50$</span>
+            </p>
+            <a
+              href={REVIEW_INFO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mb-5 text-sm underline text-ex-accent"
+            >
+              Подробнее в нашем ТГ
+            </a>
+            <button
+              onClick={() => handleOpenReview(REVIEW_BUTTON_URL)}
+              className="mx-auto block rounded-2xl bg-ex-accent px-8 py-3 text-2xl font-semibold text-[#0E5B57] font-secondary active:scale-[0.98] transition-transform"
+            >
+              Оставить отзыв
+            </button>
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import logging
 
 from aiogram import Bot
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,24 @@ async def send_order_error(telegram_id: int, order_data: dict) -> None:
     await _send_message(telegram_id, text)
 
 
-async def _send_message(telegram_id: int, text: str) -> None:
+
+
+async def send_review_banner(telegram_id: int) -> None:
+    """Send review campaign banner to user after successful exchange."""
+    info_url = settings.review_info_url
+    button_url = settings.review_button_url or info_url
+    text = (
+        "🎁 <b>Получите 50$ за отзыв!</b>\n\n"
+        "Оставьте честный отзыв о SapsanEx — и примите участие в розыгрыше <b>50$</b>.\n"
+        f"<a href=\"{info_url}\">Подробнее в нашем ТГ</a>"
+    )
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text="Оставить отзыв", url=button_url)]]
+    )
+    await _send_message(telegram_id, text, reply_markup=keyboard)
+
+
+async def _send_message(telegram_id: int, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
     """Send a message to a Telegram user via Bot API."""
     bot = Bot(token=settings.bot_token)
     try:
@@ -54,6 +72,7 @@ async def _send_message(telegram_id: int, text: str) -> None:
             text=text,
             parse_mode="HTML",
             disable_web_page_preview=True,
+            reply_markup=reply_markup,
         )
         logger.info(f"Bot message sent to {telegram_id}")
     except Exception as e:
