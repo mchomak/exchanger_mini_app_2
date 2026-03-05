@@ -239,7 +239,7 @@ export function ExchangeCalculator({ userSettings, onGoToConfirm }: Props) {
       {/* Logo */}
       <div className="flex justify-center mb-8">
         <img
-          src="/images/logo.png"
+          src="/images/logo_2.png"
           alt="SapsanEx"
           className="h-10 w-auto"
         />
