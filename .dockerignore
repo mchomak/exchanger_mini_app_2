@@ -13,3 +13,5 @@ logs
 venv
 env
 *.egg-info
+frontend/Dockerfile
+backend/Dockerfile
