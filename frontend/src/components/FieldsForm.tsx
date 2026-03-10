@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../api/client";
 import { Loader } from "./Loader";
-import type { DirectionField, UserCardItem, UserPhoneItem } from "../types";
+import type { DirectionField, UserCardItem, UserPhoneItem, UserWalletItem } from "../types";
 
 interface Props {
   directionId: string;
@@ -13,6 +13,7 @@ interface Props {
   savedEmail: string | null;
   savedPhone: string | null;
   savedCards: UserCardItem[];
+  savedWallets: UserWalletItem[];
   savedPhones: UserPhoneItem[];
   telegramId: number;
   onSubmit: (fields: Record<string, string>) => void;
@@ -45,6 +46,11 @@ function isCardField(label: string): boolean {
   return l.includes("карт") || l.includes("card") || l.includes("счёт") || l.includes("счет");
 }
 
+function isWalletField(label: string): boolean {
+  const l = label.toLowerCase();
+  return l.includes("кошел") || l.includes("wallet") || l.includes("адрес") || l.includes("address");
+}
+
 // "На карту" → "На номер" rename
 function getDisplayLabel(label: string): string {
   const l = label.toLowerCase();
@@ -72,7 +78,7 @@ function validateEmail(value: string): boolean {
 
 // Check if a field should show saved items dropdown (phone or card)
 function hasDropdown(label: string): boolean {
-  return isPhoneField(label) || isCardField(label);
+  return isPhoneField(label) || isCardField(label) || isWalletField(label);
 }
 
 // Mask a value for display: show first/last chars, hide middle
@@ -94,6 +100,7 @@ export function FieldsForm({
   savedEmail,
   savedPhone,
   savedCards,
+  savedWallets,
   savedPhones,
   telegramId,
   onSubmit,
@@ -106,7 +113,6 @@ export function FieldsForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [autoSkipped, setAutoSkipped] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   // Load direction fields
   useEffect(() => {
@@ -193,18 +199,6 @@ export function FieldsForm({
     }
   };
 
-  const handleSelectSaved = (fieldName: string, value: string) => {
-    setValues((prev) => ({ ...prev, [fieldName]: value }));
-    setOpenDropdown(null);
-    if (fieldErrors[fieldName]) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next[fieldName];
-        return next;
-      });
-    }
-  };
-
   const handleSubmit = async () => {
     const errors: Record<string, string> = {};
 
@@ -245,6 +239,49 @@ export function FieldsForm({
       }
     }
 
+    // Save newly entered requisites into DB for quick selection next time
+    if (telegramId > 0) {
+      const normalizePhone = (value: string) => value.trim().replace(/^\+/, "");
+      const knownCards = new Set(savedCards.map((card) => card.card_number.trim()));
+      const knownWallets = new Set(savedWallets.map((wallet) => wallet.address.trim().toLowerCase()));
+      const knownPhones = new Set(savedPhones.map((phone) => normalizePhone(phone.phone_number)));
+      const tasks: Promise<unknown>[] = [];
+
+      for (const field of allFields) {
+        const rawValue = values[field.name]?.trim();
+        if (!rawValue) continue;
+
+        const displayLabel = getDisplayLabel(field.label);
+        const treatAsPhone = isPhoneField(field.label) || displayLabel === "На номер";
+        if (treatAsPhone) {
+          const normalized = normalizePhone(rawValue);
+          if (!knownPhones.has(normalized)) {
+            knownPhones.add(normalized);
+            tasks.push(api.addPhone(telegramId, rawValue));
+          }
+          continue;
+        }
+
+        if (isWalletField(field.label)) {
+          const normalized = rawValue.toLowerCase();
+          if (!knownWallets.has(normalized)) {
+            knownWallets.add(normalized);
+            tasks.push(api.addWallet(telegramId, rawValue));
+          }
+          continue;
+        }
+
+        if (isCardField(field.label) && !knownCards.has(rawValue)) {
+          knownCards.add(rawValue);
+          tasks.push(api.addCard(telegramId, rawValue));
+        }
+      }
+
+      if (tasks.length > 0) {
+        await Promise.allSettled(tasks);
+      }
+    }
+
     // Build final fields dict
     // For phone fields: strip "+" before sending — API expects digits only
     const phoneFieldNames = new Set(
@@ -281,6 +318,12 @@ export function FieldsForm({
         value: c.card_number,
       }));
     }
+    if (isWalletField(field.label)) {
+      return savedWallets.map((w) => ({
+        label: w.label || maskValue(w.address),
+        value: w.address,
+      }));
+    }
     return [];
   };
 
@@ -288,11 +331,14 @@ export function FieldsForm({
     const displayLabel = getDisplayLabel(field.label);
     const showDropdown = hasDropdown(field.label);
     const dropdownItems = showDropdown ? getDropdownItems(field) : [];
-    const isDropdownOpen = openDropdown === field.name;
     // For renamed "На карту" → "На номер", treat as phone field for input type
     const isRenamed = displayLabel === "На номер";
     const inputType = isRenamed ? "tel" : mapInputType(field);
     const placeholder = isPhoneField(field.label) || isRenamed ? "+7" : displayLabel;
+    const currentValue = values[field.name] || "";
+    const selectedSavedValue = dropdownItems.some((item) => item.value === currentValue)
+      ? currentValue
+      : "__manual__";
 
     return (
       <div key={field.name} className="mb-3">
@@ -300,41 +346,33 @@ export function FieldsForm({
           {displayLabel} {isRequired && <span className="text-ex-accent">*</span>}
         </label>
         <div className="relative">
+          {showDropdown && dropdownItems.length > 0 && (
+            <select
+              value={selectedSavedValue}
+              onChange={(e) => {
+                if (e.target.value === "__manual__") return;
+                handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field);
+              }}
+              className="w-full mb-2 px-3 py-2 rounded-xl bg-ex-block-sm text-ex-text text-xs border border-ex-divider focus:border-ex-accent"
+            >
+              <option value="__manual__">{t("field_select_saved")}</option>
+              {dropdownItems.map((item, idx) => (
+                <option key={`${item.value}-${idx}`} value={item.value}>
+                  {item.label ? `${item.label} — ${item.value}` : item.value}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             type={inputType}
-            value={values[field.name] || ""}
+            value={currentValue}
             onChange={(e) => handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field)}
             className={`w-full px-4 py-3 rounded-xl bg-ex-block-sm text-ex-text placeholder-ex-text-sec
                        text-sm border font-primary transition-colors
                        ${fieldErrors[field.name] ? "border-ex-error" : "border-ex-divider focus:border-ex-accent"}`}
             placeholder={placeholder}
           />
-          {showDropdown && dropdownItems.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setOpenDropdown(isDropdownOpen ? null : field.name)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-ex-accent text-xs font-medium px-2 py-1 rounded-lg bg-ex-block-sm border border-ex-divider"
-            >
-              {t("field_select_saved")}
-            </button>
-          )}
         </div>
-        {isDropdownOpen && dropdownItems.length > 0 && (
-          <div className="mt-1 bg-ex-block-sm rounded-xl border border-ex-divider overflow-hidden shadow-lg">
-            {dropdownItems.map((item, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSelectSaved(field.name, item.value)}
-                className="w-full text-left px-4 py-2.5 text-sm text-ex-text hover:bg-ex-hover active:bg-ex-selected border-b border-ex-divider last:border-b-0 transition-colors"
-              >
-                <span className="block text-ex-text">{item.value}</span>
-                {item.label !== item.value && (
-                  <span className="block text-[10px] text-ex-text-sec">{item.label}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
         {fieldErrors[field.name] && (
           <p className="text-xs text-ex-error mt-1">{fieldErrors[field.name]}</p>
         )}
