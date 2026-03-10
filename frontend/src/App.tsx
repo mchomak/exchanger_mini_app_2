@@ -237,6 +237,7 @@ function AppContent() {
           savedEmail={userData?.settings?.saved_email ?? null}
           savedPhone={userData?.settings?.saved_phone ?? null}
           savedCards={accounts.cards}
+          savedWallets={accounts.wallets}
           savedPhones={accounts.phones}
           telegramId={telegramId}
           onSubmit={handleFieldsSubmit}
