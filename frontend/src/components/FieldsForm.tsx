@@ -268,6 +268,11 @@ export function FieldsForm({
       const knownPhones = new Set(savedPhones.map((phone) => normalizePhone(phone.phone_number)));
       const tasks: Promise<unknown>[] = [];
 
+      // Sequential label counters starting after existing items
+      let phoneCounter = savedPhones.length;
+      let cardCounter = savedCards.length;
+      let walletCounter = savedWallets.length;
+
       for (const field of allFields) {
         const rawValue = values[field.name]?.trim();
         if (!rawValue) continue;
@@ -278,7 +283,8 @@ export function FieldsForm({
           const normalized = normalizePhone(rawValue);
           if (!knownPhones.has(normalized)) {
             knownPhones.add(normalized);
-            tasks.push(api.addPhone(telegramId, rawValue));
+            phoneCounter++;
+            tasks.push(api.addPhone(telegramId, rawValue, `last${phoneCounter}`));
           }
           continue;
         }
@@ -287,14 +293,16 @@ export function FieldsForm({
           const normalized = rawValue.toLowerCase();
           if (!knownWallets.has(normalized)) {
             knownWallets.add(normalized);
-            tasks.push(api.addWallet(telegramId, rawValue));
+            walletCounter++;
+            tasks.push(api.addWallet(telegramId, rawValue, `last${walletCounter}`));
           }
           continue;
         }
 
         if (isCardField(field.label) && !knownCards.has(rawValue)) {
           knownCards.add(rawValue);
-          tasks.push(api.addCard(telegramId, rawValue));
+          cardCounter++;
+          tasks.push(api.addCard(telegramId, rawValue, `last${cardCounter}`));
         }
       }
 
