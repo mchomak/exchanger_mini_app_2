@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 
 interface CurrencyOption {
@@ -17,6 +17,25 @@ interface CurrencyModalProps {
 export function CurrencyModal({ open, onClose, onSelect, options, title }: CurrencyModalProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!open) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
 
   const filtered = useMemo(() => {
     if (!search) return options;
@@ -38,9 +57,9 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-ex-popup rounded-t-2xl max-h-[80vh] flex flex-col">
+      <div className="relative w-full max-w-md bg-ex-popup rounded-t-2xl flex flex-col" style={{ maxHeight: "80vh" }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-ex-divider">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-ex-divider">
           <h3 className="text-base font-semibold text-ex-text font-primary">{title}</h3>
           <button
             onClick={onClose}
@@ -53,7 +72,7 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
         </div>
 
         {/* Search */}
-        <div className="p-4 pb-2">
+        <div className="flex-shrink-0 p-4 pb-2">
           <input
             type="text"
             value={search}
@@ -65,7 +84,7 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
         </div>
 
         {/* List */}
-        <div className="overflow-y-auto flex-1 px-3 pb-4">
+        <div className="overflow-y-auto flex-1 min-h-0 px-3 pb-8">
           {filtered.length === 0 ? (
             <p className="text-center text-ex-text-sec py-8 text-sm">{t("no_directions")}</p>
           ) : (

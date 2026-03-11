@@ -33,12 +33,30 @@ function AppContent() {
   // Tab navigation
   const [activeTab, setActiveTab] = useState<Tab>("home");
 
-  // Exchange flow state
-  const [view, setView] = useState<AppView>("calculator");
-  const [confirmData, setConfirmData] = useState<ConfirmData | null>(null);
+  // Exchange flow state — restore from sessionStorage if available
+  const [view, setView] = useState<AppView>(() => {
+    const saved = sessionStorage.getItem("app_view");
+    return (saved === "confirmation" || saved === "fields") ? saved as AppView : "calculator";
+  });
+  const [confirmData, setConfirmData] = useState<ConfirmData | null>(() => {
+    try {
+      const saved = sessionStorage.getItem("app_confirmData");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   const [exchangeFields, setExchangeFields] = useState<Record<string, string>>({});
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+
+  // Persist view and confirmData to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("app_view", view);
+    if (confirmData) {
+      sessionStorage.setItem("app_confirmData", JSON.stringify(confirmData));
+    } else {
+      sessionStorage.removeItem("app_confirmData");
+    }
+  }, [view, confirmData]);
 
   // Saved accounts for FieldsForm dropdowns
   const [accounts, setAccounts] = useState<UserAccounts>({ cards: [], wallets: [], phones: [] });
@@ -105,6 +123,8 @@ function AppContent() {
         setConfirmData(null);
         setOrderData(null);
         setExchangeFields({});
+        sessionStorage.removeItem("app_view");
+        sessionStorage.removeItem("app_confirmData");
       }
     }
   }, [view, orderData]);
@@ -127,16 +147,20 @@ function AppContent() {
     setView("confirmation");
   }, []);
 
+  // Error specific to the fields/order creation step (shown inline, not global)
+  const [fieldsError, setFieldsError] = useState<string | null>(null);
+
   // Fields Form → Create Order → Order Status
   const handleFieldsSubmit = useCallback(
     async (fields: Record<string, string>) => {
       if (!confirmData) return;
 
       if (!telegramId) {
-        setError("Telegram ID not found. Please reopen the app from the bot.");
+        setFieldsError("Telegram ID not found. Please reopen the app from the bot.");
         return;
       }
 
+      setFieldsError(null);
       setExchangeFields(fields);
       setOrderLoading(true);
       setView("order");
@@ -150,7 +174,7 @@ function AppContent() {
         );
         setOrderData(result);
       } catch (err: any) {
-        setError(err.message || "Order creation failed");
+        setFieldsError(err.message || "Order creation failed");
         setView("fields");
       } finally {
         setOrderLoading(false);
@@ -164,6 +188,8 @@ function AppContent() {
     setConfirmData(null);
     setExchangeFields({});
     setView("calculator");
+    sessionStorage.removeItem("app_view");
+    sessionStorage.removeItem("app_confirmData");
   }, []);
 
   // Handle error OK
@@ -241,7 +267,8 @@ function AppContent() {
           savedPhones={accounts.phones}
           telegramId={telegramId}
           onSubmit={handleFieldsSubmit}
-          onBack={handleBackToConfirm}
+          onBack={() => { setFieldsError(null); handleBackToConfirm(); }}
+          submitError={fieldsError}
         />
       );
     }
