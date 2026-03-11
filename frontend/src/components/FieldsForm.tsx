@@ -18,6 +18,7 @@ interface Props {
   telegramId: number;
   onSubmit: (fields: Record<string, string>) => void;
   onBack: () => void;
+  submitError?: string | null;
 }
 
 // Heuristics to identify field type by label
@@ -105,6 +106,7 @@ export function FieldsForm({
   telegramId,
   onSubmit,
   onBack,
+  submitError,
 }: Props) {
   const { t } = useTranslation();
   const [allFields, setAllFields] = useState<DirectionField[]>([]);
@@ -136,6 +138,18 @@ export function FieldsForm({
             initial[f.name] = "";
           }
         }
+        // Restore previously saved form values from sessionStorage
+        const savedValues = sessionStorage.getItem(`fields_${directionId}`);
+        if (savedValues) {
+          try {
+            const parsed = JSON.parse(savedValues) as Record<string, string>;
+            for (const key of Object.keys(initial)) {
+              if (parsed[key] !== undefined && parsed[key] !== "") {
+                initial[key] = parsed[key];
+              }
+            }
+          } catch { /* ignore corrupt data */ }
+        }
         setValues(initial);
 
         // If no visible fields, auto-skip
@@ -154,6 +168,13 @@ export function FieldsForm({
       onSubmit(values);
     }
   }, [autoSkipped, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist form values to sessionStorage on change
+  useEffect(() => {
+    if (Object.keys(values).length > 0) {
+      sessionStorage.setItem(`fields_${directionId}`, JSON.stringify(values));
+    }
+  }, [values, directionId]);
 
   // Visible fields (exclude auto-filled telegram)
   const visibleFields = useMemo(
@@ -293,6 +314,7 @@ export function FieldsForm({
       if (!trimmed) continue;
       result[key] = phoneFieldNames.has(key) ? trimmed.replace(/^\+/, "") : trimmed;
     }
+    sessionStorage.removeItem(`fields_${directionId}`);
     onSubmit(result);
   };
 
@@ -499,6 +521,11 @@ export function FieldsForm({
             <p className="text-xs text-ex-text-sec mb-3">{t("optional_fields")}</p>
             {optionalVisible.map((field) => renderFieldInput(field, false))}
           </>
+        )}
+
+        {/* Server/submit error */}
+        {submitError && (
+          <p className="text-sm text-ex-error text-center mt-3 mb-1">{submitError}</p>
         )}
 
         {/* Submit button */}
