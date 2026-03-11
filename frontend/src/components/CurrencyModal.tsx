@@ -84,7 +84,7 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
         </div>
 
         {/* List */}
-        <div className="overflow-y-auto flex-1 min-h-0 px-3 pb-8">
+        <div className="overflow-y-auto flex-1 min-h-0 px-3" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 1rem))" }}>
           {filtered.length === 0 ? (
             <p className="text-center text-ex-text-sec py-8 text-sm">{t("no_directions")}</p>
           ) : (
