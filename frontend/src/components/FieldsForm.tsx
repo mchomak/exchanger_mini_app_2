@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../api/client";
 import { Loader } from "./Loader";
@@ -327,6 +327,23 @@ export function FieldsForm({
     return [];
   };
 
+  // Track which dropdown is currently open by field name
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!openDropdown) return;
+      const ref = dropdownRefs.current[openDropdown];
+      if (ref && !ref.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdown]);
+
   const renderFieldInput = (field: DirectionField, isRequired: boolean) => {
     const displayLabel = getDisplayLabel(field.label);
     const showDropdown = hasDropdown(field.label);
@@ -336,9 +353,7 @@ export function FieldsForm({
     const inputType = isRenamed ? "tel" : mapInputType(field);
     const placeholder = isPhoneField(field.label) || isRenamed ? "+7" : displayLabel;
     const currentValue = values[field.name] || "";
-    const selectedSavedValue = dropdownItems.some((item) => item.value === currentValue)
-      ? currentValue
-      : "__manual__";
+    const isOpen = openDropdown === field.name;
 
     return (
       <div key={field.name} className="mb-3">
@@ -347,27 +362,70 @@ export function FieldsForm({
         </label>
         <div className="relative">
           {showDropdown && dropdownItems.length > 0 && (
-            <div className="relative mb-2">
-              <select
-                value={selectedSavedValue}
-                onChange={(e) => {
-                  if (e.target.value === "__manual__") return;
-                  handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field);
-                }}
-                className="w-full appearance-none pl-3 pr-10 py-2.5 rounded-xl bg-ex-block text-ex-text text-xs border border-ex-divider focus:border-ex-accent focus:outline-none transition-colors"
+            <div
+              className="relative mb-2"
+              ref={(el) => { dropdownRefs.current[field.name] = el; }}
+            >
+              {/* Dropdown trigger button */}
+              <button
+                type="button"
+                onClick={() => setOpenDropdown(isOpen ? null : field.name)}
+                className="w-full text-left pl-3 pr-10 py-2.5 rounded-xl bg-ex-block text-ex-text text-xs border border-ex-divider focus:border-ex-accent focus:outline-none transition-colors"
               >
-                <option value="__manual__">{t("field_select_saved")}</option>
-                {dropdownItems.map((item, idx) => (
-                  <option key={`${item.value}-${idx}`} value={item.value}>
-                    {item.label ? `${item.label} — ${item.value}` : item.value}
-                  </option>
-                ))}
-              </select>
+                {dropdownItems.some((item) => item.value === currentValue)
+                  ? dropdownItems.find((item) => item.value === currentValue)!.label
+                    ? `${dropdownItems.find((item) => item.value === currentValue)!.label} — ${currentValue}`
+                    : currentValue
+                  : t("field_select_saved")}
+              </button>
+              {/* Arrow icon */}
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-ex-accent">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </div>
+              {/* Custom dropdown list */}
+              {isOpen && (
+                <div className="absolute z-50 mt-1 w-full rounded-xl bg-ex-widget border border-ex-divider shadow-lg overflow-hidden">
+                  <ul className="max-h-48 overflow-y-auto py-1">
+                    {dropdownItems.map((item, idx) => {
+                      const isSelected = item.value === currentValue;
+                      return (
+                        <li key={`${item.value}-${idx}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleChange(
+                                field.name,
+                                item.value,
+                                isRenamed ? { ...field, label: "телефон" } : field
+                              );
+                              setOpenDropdown(null);
+                            }}
+                            className={`w-full text-left px-3 py-2.5 text-xs transition-colors
+                              ${isSelected
+                                ? "bg-ex-selected text-ex-accent"
+                                : "text-ex-text hover:bg-ex-hover"
+                              }`}
+                          >
+                            {item.label ? `${item.label} — ${item.value}` : item.value}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           <input
