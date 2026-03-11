@@ -347,21 +347,28 @@ export function FieldsForm({
         </label>
         <div className="relative">
           {showDropdown && dropdownItems.length > 0 && (
-            <select
-              value={selectedSavedValue}
-              onChange={(e) => {
-                if (e.target.value === "__manual__") return;
-                handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field);
-              }}
-              className="w-full mb-2 px-3 py-2 rounded-xl bg-ex-block-sm text-ex-text text-xs border border-ex-divider focus:border-ex-accent"
-            >
-              <option value="__manual__">{t("field_select_saved")}</option>
-              {dropdownItems.map((item, idx) => (
-                <option key={`${item.value}-${idx}`} value={item.value}>
-                  {item.label ? `${item.label} — ${item.value}` : item.value}
-                </option>
-              ))}
-            </select>
+            <div className="relative mb-2">
+              <select
+                value={selectedSavedValue}
+                onChange={(e) => {
+                  if (e.target.value === "__manual__") return;
+                  handleChange(field.name, e.target.value, isRenamed ? { ...field, label: "телефон" } : field);
+                }}
+                className="w-full appearance-none pl-3 pr-10 py-2.5 rounded-xl bg-ex-block text-ex-text text-xs border border-ex-divider focus:border-ex-accent focus:outline-none transition-colors"
+              >
+                <option value="__manual__">{t("field_select_saved")}</option>
+                {dropdownItems.map((item, idx) => (
+                  <option key={`${item.value}-${idx}`} value={item.value}>
+                    {item.label ? `${item.label} — ${item.value}` : item.value}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-ex-accent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </div>
           )}
           <input
             type={inputType}
