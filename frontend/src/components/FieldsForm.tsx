@@ -69,12 +69,91 @@ function mapInputType(field: DirectionField): string {
 // Validation
 function validatePhone(value: string): boolean {
   if (!value.trim()) return true;
-  return /^[+]?[\d\s()-]{7,20}$/.test(value.trim());
+  // Strip spaces, dashes, parens
+  const cleaned = value.trim().replace(/[\s()-]/g, "");
+  // Only digits allowed, optionally starting with +
+  if (!/^\+?\d+$/.test(cleaned)) return false;
+  // Reasonable length: 7-15 digits (E.164 max is 15)
+  const digits = cleaned.replace(/^\+/, "");
+  return digits.length >= 7 && digits.length <= 15;
 }
 
 function validateEmail(value: string): boolean {
   if (!value.trim()) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function validateCard(value: string): boolean {
+  if (!value.trim()) return true;
+  const digits = value.trim().replace(/\s/g, "");
+  // Only digits, 16-19 length
+  if (!/^\d{16,19}$/.test(digits)) return false;
+  // Luhn check
+  let sum = 0;
+  for (let i = 0; i < digits.length; i++) {
+    let d = parseInt(digits[digits.length - 1 - i], 10);
+    if (i % 2 === 1) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
+function validateWallet(value: string, currencyHint: string): boolean {
+  const addr = value.trim();
+  if (!addr) return true;
+  // No spaces inside, no cyrillic
+  if (/\s/.test(addr)) return false;
+  if (/[а-яА-ЯёЁ]/.test(addr)) return false;
+
+  const hint = currencyHint.toLowerCase();
+
+  // Bitcoin (BTC) — legacy, segwit, native segwit, taproot
+  if (hint.includes("btc") || hint.includes("bitcoin")) {
+    return /^(1[1-9A-HJ-NP-Za-km-z]{25,34}|3[1-9A-HJ-NP-Za-km-z]{25,34}|bc1[a-zA-HJ-NP-Z0-9]{25,87})$/.test(addr);
+  }
+
+  // Ethereum / ERC20 / BSC / BEP20 / Polygon / Arbitrum / Base / any EVM
+  if (hint.includes("eth") || hint.includes("erc20") || hint.includes("bsc") || hint.includes("bep20")
+      || hint.includes("polygon") || hint.includes("matic") || hint.includes("arbitrum") || hint.includes("base")
+      || hint.includes("evm") || hint.includes("usdc") || hint.includes("dai")) {
+    return /^0x[0-9a-fA-F]{40}$/.test(addr);
+  }
+
+  // Tron / TRC20
+  if (hint.includes("trc20") || hint.includes("tron") || hint.includes("trx")) {
+    return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr);
+  }
+
+  // Litecoin (LTC)
+  if (hint.includes("ltc") || hint.includes("litecoin")) {
+    return /^(L[1-9A-HJ-NP-Za-km-z]{26,33}|M[1-9A-HJ-NP-Za-km-z]{26,33}|ltc1[a-zA-HJ-NP-Z0-9]{25,87})$/.test(addr);
+  }
+
+  // Ripple (XRP)
+  if (hint.includes("xrp") || hint.includes("ripple")) {
+    return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr);
+  }
+
+  // Solana (SOL)
+  if (hint.includes("sol") || hint.includes("solana")) {
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+  }
+
+  // TON (Toncoin)
+  if (hint.includes("ton")) {
+    return /^(EQ|UQ)[A-Za-z0-9_-]{46,48}$/.test(addr);
+  }
+
+  // Monero (XMR)
+  if (hint.includes("xmr") || hint.includes("monero")) {
+    return /^[48][1-9A-HJ-NP-Za-km-z]{94}$/.test(addr);
+  }
+
+  // Fallback: basic sanity — alphanumeric, min 20 chars
+  return /^[a-zA-Z0-9]{20,}$/.test(addr);
 }
 
 // Check if a field should show saved items dropdown (phone or card)
@@ -230,10 +309,18 @@ export function FieldsForm({
         continue;
       }
       if (!val) continue;
-      if (isPhoneField(f.label) && !validatePhone(val)) {
+
+      const displayLabel = getDisplayLabel(f.label);
+      const treatAsPhone = isPhoneField(f.label) || displayLabel === "На номер";
+
+      if (treatAsPhone && !validatePhone(val)) {
         errors[f.name] = t("invalid_phone");
       } else if (isEmailField(f.label) && !validateEmail(val)) {
         errors[f.name] = t("invalid_email");
+      } else if (isCardField(f.label) && !treatAsPhone && !validateCard(val)) {
+        errors[f.name] = t("invalid_card");
+      } else if (isWalletField(f.label) && !validateWallet(val, currencyGet + " " + currencyGive)) {
+        errors[f.name] = t("invalid_wallet");
       }
     }
 
