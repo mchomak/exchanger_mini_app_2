@@ -52,6 +52,17 @@ function isWalletField(label: string): boolean {
   return l.includes("кошел") || l.includes("wallet") || l.includes("адрес") || l.includes("address");
 }
 
+// Extract crypto network from currency name, e.g. "USDT TRC20" → "trc20"
+function extractNetwork(currency: string): string {
+  const networks = ["trc20", "erc20", "bep20", "bep2", "sol", "ton", "polygon", "arbitrum", "base", "optimism", "avax"];
+  const lower = currency.toLowerCase();
+  for (const net of networks) {
+    if (lower.includes(net)) return net;
+  }
+  // Fallback: use full currency name lowered as network key
+  return lower.replace(/\s+/g, "_");
+}
+
 // "На карту" → "На номер" rename
 function getDisplayLabel(label: string): string {
   const l = label.toLowerCase();
@@ -381,7 +392,8 @@ export function FieldsForm({
           if (!knownWallets.has(normalized)) {
             knownWallets.add(normalized);
             walletCounter++;
-            tasks.push(api.addWallet(telegramId, rawValue, `last${walletCounter}`));
+            const walletNetwork = extractNetwork(currencyGet + " " + currencyGive);
+            tasks.push(api.addWallet(telegramId, rawValue, `last${walletCounter}`, walletNetwork));
           }
           continue;
         }
@@ -436,7 +448,12 @@ export function FieldsForm({
       }));
     }
     if (isWalletField(field.label)) {
-      return savedWallets.map((w) => ({
+      // Filter wallets by network matching current exchange currencies
+      const currentNetwork = extractNetwork(currencyGet + " " + currencyGive);
+      const filtered = savedWallets.filter(
+        (w) => !w.network || w.network === currentNetwork
+      );
+      return filtered.map((w) => ({
         label: w.label || maskValue(w.address),
         value: w.address,
       }));

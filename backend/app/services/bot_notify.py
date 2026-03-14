@@ -46,6 +46,19 @@ async def send_order_error(telegram_id: int, order_data: dict) -> None:
     await _send_message(telegram_id, text)
 
 
+async def send_order_expired(telegram_id: int, order_data: dict) -> None:
+    """Send notification that the order was cancelled due to payment timeout."""
+    text = (
+        f"⏰ <b>Заявка отменена</b>\n\n"
+        f"🆔 ID: <code>{order_data.get('id')}</code>\n"
+        f"💰 {order_data.get('amount_give')} {order_data.get('currency_give')} → "
+        f"{order_data.get('amount_get')} {order_data.get('currency_get')}\n\n"
+        f"Время на оплату истекло. Заявка автоматически отменена.\n"
+        f"Вы можете создать новую заявку в любой момент."
+    )
+    await _send_message(telegram_id, text)
+
+
 
 
 async def send_review_banner(telegram_id: int) -> None:

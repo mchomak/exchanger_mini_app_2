@@ -12,7 +12,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(error.message || error.detail?.message || `HTTP ${response.status}`);
+    // FastAPI returns { detail: { message: "..." } } for HTTPException
+    const msg = error.detail?.message || error.message || `HTTP ${response.status}`;
+    throw new Error(msg);
   }
 
   return response.json();
@@ -107,10 +109,10 @@ export const api = {
   },
 
   // Wallets CRUD
-  addWallet(telegramId: number, address: string, label?: string) {
+  addWallet(telegramId: number, address: string, label?: string, network?: string) {
     return request<import("../types").UserWalletItem>(`/users/${telegramId}/wallets`, {
       method: "POST",
-      body: JSON.stringify({ address, label: label || null }),
+      body: JSON.stringify({ address, label: label || null, network: network || null }),
     });
   },
   updateWallet(telegramId: number, walletId: number, data: { address?: string; label?: string }) {

@@ -95,6 +95,7 @@ export interface UserWalletItem {
   id: number;
   label: string | null;
   address: string;
+  network: string | null;
 }
 
 export interface UserPhoneItem {
