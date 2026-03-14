@@ -15,6 +15,7 @@ class UserCryptoWallet(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     label: Mapped[str | None] = mapped_column(String(100), nullable=True)
     address: Mapped[str] = mapped_column(String(255), nullable=False)
+    network: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="crypto_wallets")

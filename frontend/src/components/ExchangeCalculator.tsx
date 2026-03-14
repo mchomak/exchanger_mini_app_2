@@ -223,7 +223,32 @@ export function ExchangeCalculator({ userSettings, onGoToConfirm }: Props) {
 
   const rateText = useMemo(() => {
     if (!calcResult) return "";
-    return `1 ${calcResult.currency_give} = ${calcResult.course_get} ${calcResult.currency_get}`;
+    // Compute rate from actual calculated amounts for accuracy
+    const give = parseFloat(calcResult.sum_give);
+    const get = parseFloat(calcResult.sum_get);
+    if (!give || !get || isNaN(give) || isNaN(get)) return "";
+
+    const ratePerGive = get / give;
+    const ratePerGet = give / get;
+
+    // Show whichever direction yields a number >= 1 for readability
+    if (ratePerGive >= 1) {
+      // e.g. "1 USDT = 93.5 RUB"
+      const formatted = ratePerGive >= 100
+        ? ratePerGive.toFixed(2)
+        : ratePerGive >= 1
+          ? ratePerGive.toPrecision(6).replace(/\.?0+$/, "")
+          : ratePerGive.toPrecision(6).replace(/0+$/, "");
+      return `1 ${calcResult.currency_give} = ${formatted} ${calcResult.currency_get}`;
+    } else {
+      // e.g. "1 BTC = 93500 RUB" — invert to get a readable number
+      const formatted = ratePerGet >= 100
+        ? ratePerGet.toFixed(2)
+        : ratePerGet >= 1
+          ? ratePerGet.toPrecision(6).replace(/\.?0+$/, "")
+          : ratePerGet.toPrecision(6).replace(/0+$/, "");
+      return `1 ${calcResult.currency_get} = ${formatted} ${calcResult.currency_give}`;
+    }
   }, [calcResult]);
 
   if (directionsLoading) {

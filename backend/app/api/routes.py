@@ -196,7 +196,12 @@ async def create_exchange_order(body: CreateExchangeRequest, db: AsyncSession = 
         raise
     except Exception as e:
         logger.error(f"Error creating exchange: {e}")
-        raise _error(f"Exchange creation failed: {e}", 500)
+        # Extract user-facing error text, strip technical English prefixes
+        error_msg = str(e)
+        # Remove "Ошибка! | Поля: ..." technical suffix if present
+        if " | Поля:" in error_msg:
+            error_msg = error_msg.split(" | Поля:")[0].strip()
+        raise _error(error_msg, 500)
 
 
 @router.get("/exchange/{hash}/status")
@@ -328,7 +333,7 @@ async def get_user_accounts(telegram_id: int, db: AsyncSession = Depends(get_db)
     user = await _get_user_by_tg(telegram_id, db)
     return UserAccountsResponse(
         cards=[UserCardItem(id=c.id, label=c.label, card_number=c.card_number) for c in user.cards],
-        wallets=[UserWalletItem(id=w.id, label=w.label, address=w.address) for w in user.crypto_wallets],
+        wallets=[UserWalletItem(id=w.id, label=w.label, address=w.address, network=w.network) for w in user.crypto_wallets],
         phones=[UserPhoneItem(id=p.id, label=p.label, phone_number=p.phone_number) for p in user.phones],
     )
 
@@ -375,11 +380,11 @@ async def delete_card(telegram_id: int, card_id: int, db: AsyncSession = Depends
 @router.post("/users/{telegram_id}/wallets")
 async def add_wallet(telegram_id: int, body: UserWalletCreate, db: AsyncSession = Depends(get_db)):
     user = await _get_user_by_tg(telegram_id, db)
-    wallet = UserCryptoWallet(user_id=user.id, label=body.label, address=body.address)
+    wallet = UserCryptoWallet(user_id=user.id, label=body.label, address=body.address, network=body.network)
     db.add(wallet)
     await db.commit()
     await db.refresh(wallet)
-    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address)
+    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address, network=wallet.network)
 
 
 @router.put("/users/{telegram_id}/wallets/{wallet_id}")
@@ -393,8 +398,10 @@ async def update_wallet(telegram_id: int, wallet_id: int, body: UserWalletUpdate
         wallet.label = body.label
     if body.address is not None:
         wallet.address = body.address
+    if body.network is not None:
+        wallet.network = body.network
     await db.commit()
-    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address)
+    return UserWalletItem(id=wallet.id, label=wallet.label, address=wallet.address, network=wallet.network)
 
 
 @router.delete("/users/{telegram_id}/wallets/{wallet_id}")

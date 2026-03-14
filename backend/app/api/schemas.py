@@ -105,14 +105,17 @@ class UserWalletItem(BaseModel):
     id: int
     label: Optional[str] = None
     address: str
+    network: Optional[str] = None
 
 class UserWalletCreate(BaseModel):
     label: Optional[str] = None
     address: str = Field(..., min_length=10, max_length=255)
+    network: Optional[str] = None
 
 class UserWalletUpdate(BaseModel):
     label: Optional[str] = None
     address: Optional[str] = Field(None, min_length=10, max_length=255)
+    network: Optional[str] = None
 
 
 class UserPhoneItem(BaseModel):
