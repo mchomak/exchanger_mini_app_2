@@ -48,7 +48,7 @@ export function CurrencyModal({ open, onClose, onSelect, options, title }: Curre
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center">
       {/* Overlay */}
       <div
         className="absolute inset-0"
