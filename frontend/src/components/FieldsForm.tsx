@@ -411,9 +411,12 @@ export function FieldsForm({
     }
 
     // Build final fields dict
-    // For phone fields: strip "+" before sending — API expects digits only
+    // For phone fields (including "На карту" renamed to "На номер"): strip "+" before sending
     const phoneFieldNames = new Set(
-      allFields.filter((f) => isPhoneField(f.label)).map((f) => f.name)
+      allFields.filter((f) => {
+        const displayLabel = getDisplayLabel(f.label);
+        return isPhoneField(f.label) || displayLabel === "На номер";
+      }).map((f) => f.name)
     );
     const result: Record<string, string> = {};
     for (const [key, val] of Object.entries(values)) {
@@ -594,8 +597,9 @@ export function FieldsForm({
           <p className="text-ex-error mb-4">{error}</p>
           <button
             onClick={onBack}
-            className="w-full py-3 rounded-xl bg-ex-block-sm text-ex-text-sec font-medium text-sm
-                       border border-ex-divider active:scale-[0.98] transition-transform"
+            className="w-full py-3 rounded-xl bg-ex-block-sm text-ex-text font-medium text-sm
+                       border border-ex-accent/40 active:scale-[0.98] transition-transform
+                       hover:border-ex-accent"
           >
             {t("back_button")}
           </button>
@@ -656,8 +660,9 @@ export function FieldsForm({
 
         <button
           onClick={onBack}
-          className="w-full mt-3 py-3 rounded-xl bg-ex-block-sm text-ex-text-sec font-medium text-sm
-                     border border-ex-divider active:scale-[0.98] transition-transform"
+          className="w-full mt-3 py-3 rounded-xl bg-ex-block-sm text-ex-text font-medium text-sm
+                     border border-ex-accent/40 active:scale-[0.98] transition-transform
+                     hover:border-ex-accent"
         >
           {t("back_button")}
         </button>

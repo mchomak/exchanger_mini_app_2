@@ -115,7 +115,7 @@ export const api = {
       body: JSON.stringify({ address, label: label || null, network: network || null }),
     });
   },
-  updateWallet(telegramId: number, walletId: number, data: { address?: string; label?: string }) {
+  updateWallet(telegramId: number, walletId: number, data: { address?: string; label?: string; network?: string }) {
     return request<import("../types").UserWalletItem>(`/users/${telegramId}/wallets/${walletId}`, {
       method: "PUT",
       body: JSON.stringify(data),
