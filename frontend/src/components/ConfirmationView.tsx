@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import type { CalcResult } from "../types";
 
@@ -25,7 +25,27 @@ export function ConfirmationView({
 }: Props) {
   const { t } = useTranslation();
 
-  const rateText = `1 ${calcResult.currency_give} = ${calcResult.course_get} ${calcResult.currency_get}`;
+  const rateText = useMemo(() => {
+    const give = parseFloat(calcResult.sum_give);
+    const get = parseFloat(calcResult.sum_get);
+    if (!give || !get || isNaN(give) || isNaN(get)) return "";
+
+    const ratePerGive = get / give;
+    const ratePerGet = give / get;
+
+    const format = (v: number) =>
+      v >= 100
+        ? v.toFixed(2)
+        : v >= 1
+          ? v.toPrecision(6).replace(/\.?0+$/, "")
+          : v.toPrecision(6).replace(/0+$/, "");
+
+    if (ratePerGive >= 1) {
+      return `1 ${calcResult.currency_give} = ${format(ratePerGive)} ${calcResult.currency_get}`;
+    } else {
+      return `1 ${calcResult.currency_get} = ${format(ratePerGet)} ${calcResult.currency_give}`;
+    }
+  }, [calcResult]);
 
   return (
     <div className="min-h-screen flex flex-col justify-center px-4 py-6 max-w-md mx-auto">
@@ -86,9 +106,9 @@ export function ConfirmationView({
         <button
           onClick={onBack}
           disabled={loading}
-          className="w-full mt-3 py-3 rounded-xl bg-ex-block-sm text-ex-text-sec font-medium text-sm
-                     border border-ex-divider active:scale-[0.98] transition-transform
-                     disabled:opacity-50"
+          className="w-full mt-3 py-3 rounded-xl bg-ex-block-sm text-ex-text font-medium text-sm
+                     border border-ex-accent/40 active:scale-[0.98] transition-transform
+                     hover:border-ex-accent disabled:opacity-50"
         >
           {t("back_button")}
         </button>

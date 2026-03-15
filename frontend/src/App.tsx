@@ -117,6 +117,8 @@ function AppContent() {
   const handleTabChange = useCallback((tab: Tab) => {
     setActiveTab(tab);
     if (tab === "home") {
+      // Reload accounts to pick up any changes made in settings
+      loadAccounts();
       // Reset to calculator if not in active exchange flow
       if (view !== "order" || !orderData) {
         setView("calculator");
@@ -127,7 +129,7 @@ function AppContent() {
         sessionStorage.removeItem("app_confirmData");
       }
     }
-  }, [view, orderData]);
+  }, [view, orderData, loadAccounts]);
 
   // Calculator → Confirmation
   const handleGoToConfirm = useCallback((data: ConfirmData) => {
@@ -173,6 +175,8 @@ function AppContent() {
           telegramId
         );
         setOrderData(result);
+        // Reload accounts in case FieldsForm saved new requisites
+        loadAccounts();
       } catch (err: any) {
         setFieldsError(err.message || "Order creation failed");
         setView("fields");
@@ -180,7 +184,7 @@ function AppContent() {
         setOrderLoading(false);
       }
     },
-    [confirmData, telegramId]
+    [confirmData, telegramId, loadAccounts]
   );
 
   const handleNewExchange = useCallback(() => {
@@ -308,6 +312,7 @@ function AppContent() {
             savedFullName={userData?.settings?.saved_full_name ?? null}
             savedEmail={userData?.settings?.saved_email ?? null}
             onProfileSaved={handleProfileSaved}
+            onAccountsChanged={loadAccounts}
           />
         </div>
       )}
